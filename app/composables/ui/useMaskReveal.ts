@@ -1,14 +1,13 @@
 import type { Ref } from 'vue'
 
 /**
- * `mask-line-up` — a entrada de todo título lírico do sistema.
+ * `mask-line-up` — título entra subindo por trás de uma máscara em vez de aparecer:
+ * `overflow: hidden` no pai, `translateY(100%)` no filho. Funciona em SSR — o servidor
+ * entrega o texto no estado final e o cliente promove a partir dele, então crawler e
+ * leitor de tela nunca veem conteúdo escondido.
  *
- * O título sobe por trás de uma máscara em vez de aparecer: `overflow: hidden` no pai,
- * `translateY(100%)` no filho. Funciona em SSR — o servidor entrega o texto no estado
- * final e o cliente promove a partir dele, então crawler e leitor de tela nunca veem
- * conteúdo escondido.
- *
- * Ver docs/prd/90-movimento.md §7.
+ * Exige CSS de suporte no elemento alvo: `overflow: hidden` (a classe `mask-reveal-line`
+ * abaixo só cobre a linha gerada pelo SplitText).
  */
 export const useMaskReveal = (
   target: Ref<HTMLElement | null>,
@@ -31,17 +30,11 @@ export const useMaskReveal = (
 
     // Movimento reduzido: só opacidade, sem máscara e sem stagger. O deslocamento é o
     // que causa enjoo; a opacidade é o que explica que algo mudou — ela fica.
-    // `once: true` SAIU dos dois ramos, e não é cosmética: era o último reveal `once` do
-    // site (app/utils/cena.ts documenta `{ start, once: true }` como o padrão SUBSTITUÍDO).
-    // Um gatilho `once` ainda vivo — start cruzado, end não — é revertido pelo _revertAll de
-    // qualquer ScrollTrigger.refresh(), e como ele não tem scrub não há progresso a
-    // re-derivar depois: o .from() fica preso em progresso 0, ou seja INVISÍVEL. Gatilho
-    // scrub é re-sincronizado a cada refresh (ScrollTrigger.js:1584), então é ele que torna
-    // seguro o refresh livre que o plugin passou a fazer. E de quebra o título passa a
-    // desfazer na subida como o resto do site.
-    // fromTo e não from nos dois ramos: `.from()` relê o destino do DOM ao inicializar e
-    // pode gravar o próprio estado inicial como alvo, deixando o título invisível para
-    // sempre (medido em S4/S5/S8 em 2026-08-03).
+    // Gatilho é scrub (não once): re-sincroniza a cada ScrollTrigger.refresh(), então um
+    // refresh solto (troca de webfont, imagem lazy decodificando) nunca deixa o tween
+    // preso em progresso 0. fromTo e não from: `.from()` relê o destino do DOM ao
+    // inicializar e pode gravar o próprio estado inicial como alvo, deixando o elemento
+    // invisível para sempre.
     if ($prefersReducedMotion?.()) {
       ctx = $gsap.context(() => {
         $gsap.fromTo(el, { opacity: 0 }, { opacity: 1, duration: 0.2, scrollTrigger: cenaScrub(el, { start }) })
@@ -52,24 +45,22 @@ export const useMaskReveal = (
     ctx = $gsap.context(() => {
       split = new $SplitText(el, {
         type: 'lines',
-        linesClass: 'jm-mask-line',
+        linesClass: 'mask-reveal-line',
         // aria-hidden no clone + texto original preservado para leitor de tela.
         autoSplit: true,
         mask: 'lines',
         // A animação nasce DENTRO do onSplit e é RETORNADA — não pode ficar depois do
-        // construtor. autoSplit refaz a divisão quando a webfont termina de carregar
-        // (medido: ~35ms depois do primeiro split) e descarta as linhas antigas: um tween
-        // criado do lado de fora fica órfão nelas, e as linhas novas nascem sem estado
-        // inicial e sem gatilho — o título aparece pronto, sem subir. Em carga fria isso
-        // acontece SEMPRE; com a fonte em cache, quase nunca. Daí a falha intermitente.
-        // Retornar a animação é o que faz o GSAP revertê-la antes de re-dividir.
+        // construtor. autoSplit refaz a divisão quando a webfont termina de carregar e
+        // descarta as linhas antigas: um tween criado do lado de fora fica órfão nelas, e
+        // as linhas novas nascem sem estado inicial e sem gatilho. Retornar a animação é
+        // o que faz o GSAP revertê-la antes de re-dividir.
         // Sem `delay`: sob scrub ele é código morto — o ScrollTrigger pausa o tween e o
         // conduz por totalProgress, que não inclui delay. Quem escalona é o stagger.
         onSplit: self => $gsap.fromTo(self.lines, { yPercent: 100 }, {
           yPercent: 0,
           duration: 0.5,
           stagger,
-          ease: 'jmOut',
+          ease: 'easeOut',
           scrollTrigger: cenaScrub(el, { start })
         })
       })

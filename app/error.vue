@@ -1,16 +1,11 @@
 <template>
-  <div class="flex min-h-screen flex-col items-center justify-center px-6 py-12 text-center text-fg">
-    <TheAtmosphere />
-    <div class="max-w-md">
-      <p class="mb-5 inline-block rounded-full border border-border bg-surface px-4 py-1.5 font-mono text-[0.70rem] uppercase tracking-[0.2em] text-fg-muted">
-        Erro {{ error.statusCode }}
-      </p>
-      <UiDisplay class="mb-4">{{ title }}</UiDisplay>
-      <p class="mb-8 leading-relaxed text-fg-muted">
-        {{ message }}
-      </p>
-      <UiButton @click="handleError">Voltar para o início</UiButton>
-    </div>
+  <div class="flex min-h-screen flex-col items-center justify-center px-6 py-12 text-center">
+    <p class="mb-4 text-sm uppercase tracking-widest opacity-60">
+      Erro {{ error.statusCode }}
+    </p>
+    <h1 class="mb-4 text-3xl font-bold">{{ title }}</h1>
+    <p class="mb-8 opacity-80">{{ message }}</p>
+    <button class="rounded px-4 py-2 underline" @click="handleError">Voltar para o início</button>
   </div>
 </template>
 
@@ -28,7 +23,7 @@ const is404 = computed(() => props.error.statusCode === 404)
 const title = computed(() => (is404.value ? 'Página não encontrada' : 'Algo deu errado'))
 const message = computed(() =>
   is404.value
-    ? 'A página que você procura não existe ou foi movida. Volte à página inicial para continuar navegando.'
+    ? 'A página que você procura não existe ou foi movida.'
     : 'Tivemos um problema ao carregar esta página. Tente novamente em alguns instantes.'
 )
 
@@ -39,6 +34,3 @@ useSeoMeta({
   robots: 'noindex'
 })
 </script>
-
-<style scoped>
-</style>
