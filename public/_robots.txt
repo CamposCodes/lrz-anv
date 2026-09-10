@@ -1,0 +1,31 @@
+# SEO — crawlers padrão
+User-agent: *
+Allow: /
+
+# AEO & GEO — bots de IA / answer engines explicitamente permitidos
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Applebot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
+# A URL real do Sitemap é injetada pelo módulo a partir de site.url.
+Sitemap: https://example.com/sitemap.xml

@@ -1,0 +1,35 @@
+[build]
+  command = "npm run build"
+  # Com o preset Netlify do Nuxt (SSR), omita 'publish' (auto-detectado).
+  # Para SSG puro: command = "npm run generate" e publish = "dist".
+
+[build.environment]
+  NODE_VERSION = "20"
+  # Gotcha Windows/CI: @nuxt/fonts baixando Google Fonts pode falhar com
+  # UNABLE_TO_VERIFY_LEAF_SIGNATURE. Usar a CA do sistema evita o erro.
+  NODE_OPTIONS = "--use-system-ca"
+
+# Assets hasheados imutáveis (bundles JS/CSS) — 1 ano
+[[headers]]
+  for = "/_nuxt/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# Imagens estáticas — 1 dia + revalidação
+[[headers]]
+  for = "/images/*"
+  [headers.values]
+    Cache-Control = "public, max-age=86400, stale-while-revalidate=604800"
+
+# Fontes self-hosted — 1 ano
+[[headers]]
+  for = "/font/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# Preload do LCP via header HTTP (antes do parse do HTML).
+# AJUSTE para a imagem LCP real da sua home.
+[[headers]]
+  for = "/"
+  [headers.values]
+    Link = "</images/dj/dj-rooftop-hero.webp>; rel=preload; as=image; type=image/webp; fetchpriority=high"
