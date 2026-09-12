@@ -42,6 +42,10 @@ export default defineNuxtConfig({
   },
 
   nitro: {
+    // Força preset estático puro: sem isso, na Netlify o Nitro auto-detecta
+    // o ambiente e troca pro preset `netlify` (functions), que não gera
+    // `.output/public` — quebra o publish directory configurado.
+    preset: 'static',
     prerender: {
       crawlLinks: true,
       routes: ['/']
