@@ -53,3 +53,23 @@ export const saidaDeSecao = (
   invalidateOnRefresh: true,
   ...extra
 })
+
+/**
+ * Gatilho de seção "grudada" — usa `position: sticky` no filho em vez de GSAP pin: mais
+ * barato (sem recálculo de layout do pin) e o navegador já resolve nativamente. start/end
+ * cobrem a seção INTEIRA (não só a entrada): o filho sticky fica em vista do topo ao fundo
+ * da seção, e o progresso do scrub (0→1) anima o que estiver dentro dela.
+ *
+ * A seção precisa ser mais alta que 100vh (ex.: `min-height: 250vh`) pra sobrar scroll
+ * pro filho sticky "segurar" enquanto a animação roda.
+ */
+export const secaoGrudada = (
+  trigger: Element | null,
+  extra: Record<string, unknown> = {}
+) => ({
+  trigger,
+  start: 'top top',
+  end: 'bottom bottom',
+  scrub: 0.8,
+  ...extra
+})

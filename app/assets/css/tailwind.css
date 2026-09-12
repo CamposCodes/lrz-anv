@@ -1,8 +1,168 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ============================================================
+   TIPOGRAFIA — dupla proposital: Comico (display, bold, estrutural)
+   carrega o peso do texto; Luxurious Script (cursiva, expressiva) é
+   reservada só pro nome do Lorenzo — nunca as duas na mesma palavra.
+   Contraste de peso + tamanho + papel é o que faz a mistura funcionar.
+   ============================================================ */
+@font-face {
+  font-family: 'Comico';
+  src:
+    url('/fonts/comico/Comico-Regular.woff2') format('woff2'),
+    url('/fonts/comico/Comico-Regular.woff') format('woff');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+.font-comico {
+  font-family: 'Comico', system-ui, sans-serif;
+}
+
+.font-script {
+  font-family: 'Luxurious Script', cursive;
+}
+
+/* Instrument Serif — mensagens dos convidados pro Lorenzo. Resolvida pelo
+   @nuxt/fonts (mesmo mecanismo do Luxurious Script acima: detecta o
+   font-family no CSS e busca/self-hosta sozinho, sem @font-face manual). */
+.font-instrument-serif {
+  font-family: 'Instrument Serif', serif;
+}
+
+@font-face {
+  font-family: 'Pauls Ransom Note';
+  src:
+    url('/fonts/ransom/PaulsRansomNote.woff2') format('woff2'),
+    url('/fonts/ransom/PaulsRansomNote.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+.font-ransom {
+  font-family: 'Pauls Ransom Note', cursive;
+}
+
+@font-face {
+  font-family: 'Magazine Letter';
+  src:
+    url('/fonts/magazine-letter/MagazineLetter-Regular.woff2') format('woff2'),
+    url('/fonts/magazine-letter/MagazineLetter-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+.font-magazine-letter {
+  font-family: 'Magazine Letter', cursive;
+}
+
+/* Recorte de revista: cada letra "colada" torta, com leve variação de tamanho —
+   determinístico por posição (nth-child), nunca random, pra não gerar mismatch
+   entre o HTML do servidor e o do cliente. */
+.ransom-letter:nth-child(odd) { transform: rotate(-4deg) translateY(-2px); }
+.ransom-letter:nth-child(even) { transform: rotate(4deg) translateY(2px); }
+.ransom-letter:nth-child(3n) { transform: rotate(-7deg) translateY(1px); font-size: 1.08em; }
+.ransom-letter:nth-child(5n) { transform: rotate(6deg) translateY(-1px); font-size: 0.92em; }
+
+:root {
+  --radius: 0.625rem;
+
+  /* Paleta da marca — preto, vinho, dourado, quase-branco. Dourado é o único accent:
+     usado só em ações/estados interativos (primary/accent/ring), nunca em superfície. */
+  --background: #000000;
+  --foreground: #f2f2f2;
+  --card: #2e1212;
+  --card-foreground: #f2f2f2;
+  --popover: #2e1212;
+  --popover-foreground: #f2f2f2;
+  --primary: #f2b90f;
+  --primary-foreground: #1b1b1b;
+  --secondary: #520000;
+  --secondary-foreground: #f2f2f2;
+  --muted: #2e1212;
+  --muted-foreground: #9c9c9c;
+  --accent: #f2b90f;
+  --accent-foreground: #1b1b1b;
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: #3d2323;
+  --input: #3d2323;
+  --ring: #f2b90f;
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+}
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
 
 @layer base {
   html {
     scroll-behavior: smooth;
+    /* Cada "cena" (Cover, cada ContributorSection, Finale) é um ponto de
+       snap — sem isso, um scroll rápido/fling (comum no celular) podia
+       atravessar uma seção inteira de 200vh antes da animação de entrada
+       dela sequer disparar visualmente. `mandatory` garante que o scroll
+       sempre assenta numa cena por vez; `.scroll-scene` (embaixo) marca
+       onde. Não interfere no scrub interno do Cover nem no pin do
+       ContributorSection — só decide onde o scroll "solto"/fling assenta
+       quando o gesto termina. */
+    scroll-snap-type: y mandatory;
   }
 
   :focus-visible {
@@ -20,6 +180,46 @@
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+
+  /* Snap forçado é ele mesmo um movimento brusco — quem pede menos
+     movimento não deve ser "puxado" de volta pra cena nenhuma. */
+  html {
+    scroll-snap-type: none !important;
+  }
+}
+
+/* Marca o início de cada cena de scroll (Cover/ContributorSection/Finale)
+   como ponto de snap. `stop: always` é o que de fato impede pular uma cena
+   inteira num fling rápido — sem ele, `mandatory` ainda deixaria o navegador
+   "pular direto" pro próximo ponto de snap se o gesto for forte o
+   suficiente; com `always`, o scroll é obrigado a passar por CADA cena. */
+.scroll-scene {
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+}
+
+/* Moldura polaroid — reutilizada pelo cartão central arrastável e por toda
+   camada das pilhas físicas em ContributorSection.vue. Borda clara mais
+   generosa embaixo (espaço clássico de legenda física) e sombra própria por
+   camada, no lugar do overflow-hidden/shadow-2xl sem moldura de antes. */
+.polaroid-frame {
+  box-sizing: border-box;
+  background: #f8f4ea;
+  padding: 4% 4% 11%;
+  box-shadow: 0 18px 34px -16px rgba(0, 0, 0, 0.6);
+}
+
+/* Fade radial atrás da legenda solta do ContributorSection (sem virar caixa) —
+   dá contraste pro texto sobre a foto/fundo sem reintroduzir borda/fundo
+   sólido/blur. ::before do próprio elemento (não um node novo), então herda a
+   opacity que o GSAP anima no container e acompanha entrada/saída sozinho. */
+.caption-fade::before {
+  content: '';
+  position: absolute;
+  inset: -1.5rem -1.25rem;
+  z-index: -1;
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0) 72%);
+  pointer-events: none;
 }
 
 /* ============================================================
@@ -40,3 +240,4 @@
   opacity: 0;
   transform: translateY(-8px);
 }
+

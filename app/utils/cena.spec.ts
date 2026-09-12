@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { cenaScrub, saidaDeSecao } from './cena'
+import { cenaScrub, saidaDeSecao, secaoGrudada } from './cena'
 
 describe('cenaScrub', () => {
   it('usa o trigger informado e scrub 0.8 por padrão', () => {
@@ -22,5 +22,14 @@ describe('saidaDeSecao', () => {
     expect(config.invalidateOnRefresh).toBe(true)
     expect(config.start).toBe('bottom bottom')
     expect(config.end).toBe('bottom top')
+  })
+})
+
+describe('secaoGrudada', () => {
+  it('cobre a seção inteira, do topo ao fundo', () => {
+    const config = secaoGrudada(null)
+    expect(config.start).toBe('top top')
+    expect(config.end).toBe('bottom bottom')
+    expect(config.scrub).toBe(0.8)
   })
 })

@@ -4,12 +4,13 @@ import { SplitText } from 'gsap/SplitText'
 import { Draggable } from 'gsap/Draggable'
 import { InertiaPlugin } from 'gsap/InertiaPlugin'
 import { CustomEase } from 'gsap/CustomEase'
+import { MotionPathPlugin } from 'gsap/MotionPathPlugin'
 
 // GSAP só no cliente: nada de animação no SSR — o servidor entrega o estado final
 // (crawlers e leitores de tela veem o conteúdo) e o cliente promove a partir dele.
 // Reveal simples continua em CSS sempre que possível: roda fora da main thread.
 export default defineNuxtPlugin(() => {
-  gsap.registerPlugin(ScrollTrigger, SplitText, Draggable, InertiaPlugin, CustomEase)
+  gsap.registerPlugin(ScrollTrigger, SplitText, Draggable, InertiaPlugin, CustomEase, MotionPathPlugin)
 
   // Curvas nomeadas para os easings comuns de UI. Espelhe aqui qualquer curva
   // equivalente que você definir em CSS, para as duas linguagens ficarem em sincronia.
