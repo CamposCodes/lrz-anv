@@ -240,14 +240,20 @@
 import { RotateCcw } from '@lucide/vue'
 import type { Contributor } from '@/types'
 
-const props = defineProps<{ contributor: Contributor, contributors: Contributor[] }>()
+const props = defineProps<{ contributor: Contributor }>()
 
-// Pool do filme: todo mundo, com este contribuidor sempre por último — é nele
-// que o ciclo das pilhas assenta com mais frequência conforme o pool clampeia.
-const photoPool = computed(() => [
-  ...props.contributors.filter(c => c.name !== props.contributor.name),
-  props.contributor
-])
+// Pool da pilha: só as fotos DESTE contribuidor — cada seção mostra somente
+// as próprias fotos, nunca as de outra pessoa (antes o pool misturava todo
+// mundo; era por isso que a pilha do Pai mostrava Ana/Bruno/Carla no bolo).
+// Quem só tem uma foto (`photo`, sem `photos`) cicla nela mesma — a pilha
+// simplesmente não varia, o que já era o caso antes de existir `photos`.
+// Cada entrada é um clone RASO do contribuidor com `photo` trocada: nome/
+// mensagem/áudio/transcrição continuam vindo sempre de `props.contributor`
+// no template (nunca de `current`), então a legenda nunca muda ao ciclar.
+const photoPool = computed(() => {
+  const photos = props.contributor.photos?.length ? props.contributor.photos : [props.contributor.photo]
+  return photos.map(photo => ({ ...props.contributor, photo }))
+})
 
 function clampIdx(i: number) {
   return Math.min(Math.max(i, 0), photoPool.value.length - 1)

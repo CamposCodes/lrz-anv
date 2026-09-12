@@ -12,9 +12,11 @@ export const contributors: Contributor[] = [
     name: 'Pai',
     photo: '/images/pai/pai-19.webp',
     // Fotos reais (WhatsApp), otimizadas/convertidas pra WebP em
-    // scripts/optimize-pai-photos.mjs — alimentam o mural arrastável do
-    // FinaleSection com variedade de verdade em vez de repetir uma só foto.
-    photos: Array.from({ length: 19 }, (_, i) => `/images/pai/pai-${String(i + 1).padStart(2, '0')}.webp`),
+    // scripts/optimize-pai-photos.mjs — alimentam tanto a pilha desta seção
+    // quanto o mural arrastável do FinaleSection, com variedade de verdade em
+    // vez de repetir uma só foto. pai-19 primeiro (mesma foto de `photo`
+    // acima) pra a pilha começar exatamente na capa.
+    photos: ['/images/pai/pai-19.webp', ...Array.from({ length: 18 }, (_, i) => `/images/pai/pai-${String(i + 1).padStart(2, '0')}.webp`)],
     audio: '/audio/mensagem-pai.mp3',
     message: paiSegments.map(s => s.text).join(' '),
     transcriptSegments: paiSegments
