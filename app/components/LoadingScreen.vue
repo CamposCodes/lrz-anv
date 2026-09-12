@@ -56,11 +56,15 @@ function waitFonts() {
 
 function preloadImage(src: string) {
   return new Promise<void>((resolve) => {
+    let done = false
+    const finish = () => { if (!done) { done = true; resolve() } }
     const img = new Image()
     // decode() garante que o frame já está pronto pra desenhar, não só baixado.
     // Falha (404, formato) nunca deve travar o gate pra sempre — resolve mesmo assim.
-    img.onload = () => img.decode().then(resolve).catch(() => resolve())
-    img.onerror = () => resolve()
+    // decode() pode nunca resolver em alguns ambientes (bug conhecido sem
+    // aceleração de GPU) — o timeout garante que o gate nunca trava pra sempre.
+    img.onload = () => { img.decode().then(finish).catch(finish); setTimeout(finish, 2000) }
+    img.onerror = () => finish()
     img.src = src
   })
 }
