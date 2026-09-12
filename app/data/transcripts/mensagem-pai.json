@@ -1,11 +1,11 @@
 [
   {
-    "text": "Oi meu filho, parabéns Lorenzo, parabéns!",
+    "text": "Oi meu filho, parabéns Lorenzo, parabéns, tá?",
     "start": 0,
     "end": 7
   },
   {
-    "text": "Que Deus abençoe meu filho, cada passo de seu caminho proteja seus dias, ilumine sempre as suas decisões.",
+    "text": "Que Deus abençoe meu filho, cada passo de seu caminho proteja seus dias, ilumine sempre as suas decisões, tá?",
     "start": 7,
     "end": 17
   },
@@ -40,12 +40,17 @@
     "end": 50
   },
   {
-    "text": "Um grande abraço do seu pai! Tudo de melhor para você.",
+    "text": "Um grande abraço ao seu pai, tá?",
     "start": 51,
+    "end": 54
+  },
+  {
+    "text": "Tudo de melhor para você.",
+    "start": 54,
     "end": 56
   },
   {
-    "text": "Pode contar comigo, tamo junto.",
+    "text": "Pode contar comigo, estamos juntos.",
     "start": 56,
     "end": 59
   }

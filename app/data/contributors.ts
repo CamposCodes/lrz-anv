@@ -1,5 +1,7 @@
 import type { Contributor } from '@/types'
 import paiSegments from './transcripts/mensagem-pai.json'
+import vitorSegments from './transcripts/mensagem-vitor.json'
+import daviSegments from './transcripts/mensagem-davi.json'
 
 // Conteúdo real chega via WhatsApp/Drive ao longo da semana — só editar este array,
 // nenhuma seção precisa de markup novo por pessoa.
@@ -22,20 +24,20 @@ export const contributors: Contributor[] = [
     transcriptSegments: paiSegments
   },
   {
-    name: 'Ana Souza',
-    photo: 'https://picsum.photos/seed/lorenzo-ana/800/1000',
-    audio: '/audio/placeholder-1.mp3',
-    message: 'Lorenzo, foi um prazer trabalhar ao seu lado esse ano todo. Feliz aniversário!'
+    // Foto ainda não chegou — placeholder até o Vitor mandar as fotos reais
+    // (aí processa com o mesmo pipeline de scripts/optimize-pai-photos.mjs).
+    name: 'Vitor, Irmão',
+    photo: 'https://picsum.photos/seed/lorenzo-vitor/800/1000',
+    audio: '/audio/mensagem-vitor.mp3',
+    message: vitorSegments.map(s => s.text).join(' '),
+    transcriptSegments: vitorSegments
   },
   {
-    name: 'Bruno Lima',
-    photo: 'https://picsum.photos/seed/lorenzo-bruno/800/1000',
-    message: 'Parabéns, Lorenzo! Que venham muitas conquistas pela frente.'
-  },
-  {
-    name: 'Carla Mendes',
-    photo: 'https://picsum.photos/seed/lorenzo-carla/800/1000',
-    audio: '/audio/placeholder-2.mp3',
-    message: 'Feliz aniversário! Obrigada por sempre trazer leveza pro time.'
+    // Idem — placeholder até o Davi mandar as fotos reais.
+    name: 'Davi Dooup, Degrau',
+    photo: 'https://picsum.photos/seed/lorenzo-davi/800/1000',
+    audio: '/audio/mensagem-davi.mp3',
+    message: daviSegments.map(s => s.text).join(' '),
+    transcriptSegments: daviSegments
   }
 ]
