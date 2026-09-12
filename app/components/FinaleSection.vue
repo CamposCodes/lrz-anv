@@ -1,5 +1,5 @@
 <template>
-  <section ref="sectionEl" class="scroll-scene relative flex min-h-screen flex-col items-center justify-center gap-10 overflow-hidden px-6 py-24 sm:px-12">
+  <section ref="sectionEl" class="scroll-scene relative flex min-h-dvh flex-col items-center justify-center gap-10 overflow-hidden px-6 py-24 sm:px-12">
     <div ref="confettiHost" class="pointer-events-none absolute inset-0" />
 
     <!-- Galeria arrastável: TODAS as fotos de todo mundo, ladrilhadas várias
@@ -96,7 +96,6 @@ const galleryViewportEl = ref<HTMLElement | null>(null)
 const galleryGridEl = ref<HTMLElement | null>(null)
 let galleryDraggable: { kill: () => void }[] | null = null
 let tiltXTo: ((v: number) => void) | null = null
-let tiltYTo: ((v: number) => void) | null = null
 
 onMounted(() => {
   if (!$gsap || !$Draggable || !galleryViewportEl.value || !galleryGridEl.value || !galleryTiles.value.length) return
@@ -130,15 +129,26 @@ onMounted(() => {
   // Leve "inclinação" reativa ao arrasto (rotationY conforme a velocidade
   // horizontal) — reforça a sensação de mural em perspectiva reagindo ao
   // gesto, igual as referências. quickTo porque é atualizado a cada frame
-  // do drag (gsap-performance: evitar recriar tween por update).
+  // do drag (gsap-performance: evitar recriar tween por update). rotationX
+  // fica fixa (setada uma vez acima) — sem drag vertical não há velocidade
+  // de eixo Y pra reagir.
   if (tilt3d) {
     tiltXTo = $gsap.quickTo(galleryGridEl.value, 'rotationY', { duration: 0.4, ease: 'power3' })
-    tiltYTo = $gsap.quickTo(galleryGridEl.value, 'rotationX', { duration: 0.4, ease: 'power3' })
   }
 
+  // `type: 'x'` (não 'x,y'): o GSAP Draggable SEMPRE força `touch-action: none`
+  // quando arrasta nos dois eixos (allowX === allowY na fonte do plugin, sem
+  // exceção via config) — no celular isso bloqueava o scroll nativo da PÁGINA
+  // toda vez que o gesto de rolar começava em cima da galeria (52-62% da
+  // tela), travando a rolagem no meio da seção. Com um único eixo, o
+  // Draggable aplica `touch-action: pan-y`, liberando o navegador pra rolar
+  // verticalmente igual antes — só o arrasto horizontal continua sob o GSAP.
+  // Sem perda de conteúdo: o grid só repete ciclicamente as mesmas fotos
+  // (ver `galleryTiles` acima), então linhas fora do recorte vertical
+  // estático não escondem nenhuma foto única.
   const draggables = $Draggable.create(galleryGridEl.value, {
-    type: 'x,y',
-    bounds: { minX, maxX: 0, minY, maxY: 0 },
+    type: 'x',
+    bounds: { minX, maxX: 0 },
     inertia: !$prefersReducedMotion?.(),
     cursor: 'grab',
     onPress() {
@@ -151,12 +161,10 @@ onMounted(() => {
       this.target.style.cursor = 'grab'
       this.target.style.willChange = 'auto'
       tiltXTo?.(0)
-      tiltYTo?.(tilt3d ? 8 : 0)
     },
     onDrag() {
       if (!tilt3d) return
       tiltXTo?.($gsap.utils.clamp(-10, 10, this.deltaX * 0.6))
-      tiltYTo?.($gsap.utils.clamp(2, 14, 8 - this.deltaY * 0.4))
     }
   })
   galleryDraggable = draggables as unknown as { kill: () => void }[]

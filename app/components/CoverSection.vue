@@ -1,5 +1,5 @@
 <template>
-  <section ref="sectionEl" class="scroll-scene relative flex min-h-screen items-center justify-center overflow-hidden px-8">
+  <section ref="sectionEl" class="scroll-scene relative flex min-h-dvh items-center justify-center overflow-hidden px-8">
     <div class="pointer-events-none absolute inset-0 -z-10 bg-black" />
 
     <div ref="titleWrapEl" class="mx-auto max-w-4xl text-center">

@@ -1,6 +1,6 @@
 <template>
-  <section ref="sectionEl" class="scroll-scene relative" style="min-height: 200vh">
-    <div ref="stageEl" class="sticky top-0 h-screen overflow-hidden px-6">
+  <section ref="sectionEl" class="scroll-scene relative" style="min-height: 200dvh">
+    <div ref="stageEl" class="sticky top-0 h-dvh overflow-hidden px-6">
       <!-- Chuva de letras "recorte de revista" caindo antes das fotos assentarem —
            eco do Cover se dispersando. Cada letra é `absolute` e ganha x/y própria
            via GSAP (onMounted), não flex/gap — é isso que espalha elas pela largura
