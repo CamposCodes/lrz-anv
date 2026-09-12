@@ -73,18 +73,27 @@ const TILE_GAP = 22
 const GRID_COLS = 8
 const GRID_ROWS = 6
 
+// Achata TODAS as fotos de todo mundo (quem tem `photos` — várias fotos reais —
+// contribui com cada uma; quem só tem `photo` contribui com uma) num pool só,
+// e o grid cicla por esse pool em vez de por contribuidor. Com o Pai tendo 19
+// fotos reais, o mural fica de verdade variado em vez de repetir uma só foto
+// por pessoa 48 vezes.
+const photoPool = computed(() => props.contributors.flatMap(
+  c => (c.photos?.length ? c.photos : [c.photo]).map(photo => ({ photo, name: c.name }))
+))
+
 const galleryTiles = computed(() => {
-  const pool = props.contributors
+  const pool = photoPool.value
   if (!pool.length) return []
   const tileHeight = TILE_WIDTH * 1.25 + (TILE_WIDTH * 1.25) / 9 // aspect-[4/5] + a "moldura" do .polaroid-frame
   return Array.from({ length: GRID_COLS * GRID_ROWS }, (_, i) => {
     const col = i % GRID_COLS
     const row = Math.floor(i / GRID_COLS)
-    const contributor = pool[i % pool.length]!
+    const entry = pool[i % pool.length]!
     return {
       key: i,
-      photo: contributor.photo,
-      name: contributor.name,
+      photo: entry.photo,
+      name: entry.name,
       x: col * (TILE_WIDTH + TILE_GAP),
       y: row * (tileHeight + TILE_GAP),
       rotation: ((i * 37) % 7) - 3

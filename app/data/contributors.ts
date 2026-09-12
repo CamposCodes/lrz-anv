@@ -10,7 +10,11 @@ export const contributors: Contributor[] = [
     // placeholder. `message` é o fallback mostrado antes do play; depois que
     // toca, o texto troca por transcriptSegments acompanhando o áudio.
     name: 'Pai',
-    photo: 'https://picsum.photos/seed/lorenzo-pai/800/1000',
+    photo: '/images/pai/pai-19.webp',
+    // Fotos reais (WhatsApp), otimizadas/convertidas pra WebP em
+    // scripts/optimize-pai-photos.mjs — alimentam o mural arrastável do
+    // FinaleSection com variedade de verdade em vez de repetir uma só foto.
+    photos: Array.from({ length: 19 }, (_, i) => `/images/pai/pai-${String(i + 1).padStart(2, '0')}.webp`),
     audio: '/audio/mensagem-pai.mp3',
     message: paiSegments.map(s => s.text).join(' '),
     transcriptSegments: paiSegments
