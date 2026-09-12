@@ -196,6 +196,15 @@
 .scroll-scene {
   scroll-snap-align: start;
   scroll-snap-stop: always;
+  /* `contain: paint` obriga o navegador a recortar QUALQUER conteúdo desta
+     seção (inclusive camadas com transform/will-change 3D, tipo a galeria
+     arrastável do Finale) nos limites da própria caixa — sem isso, um glitch
+     de composição no scroll rápido pra frente/trás no Android Chrome deixava
+     a galeria "grudada" por cima da cena anterior. `isolation: isolate` dá a
+     cada cena seu próprio contexto de empilhamento, então nada de uma cena
+     pinta por cima de outra mesmo sob esse tipo de bug de renderização. */
+  contain: layout paint;
+  isolation: isolate;
 }
 
 /* Moldura polaroid — reutilizada pelo cartão central arrastável e por toda

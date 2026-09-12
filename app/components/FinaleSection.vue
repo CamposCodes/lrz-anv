@@ -7,22 +7,16 @@
          inércia) revela mais do "mural" pros lados. `w-screen left-1/2
          -translate-x-1/2` é o truque padrão de full-bleed (a seção tem
          padding lateral, a galeria quebra pra fora dele) pra parecer um
-         mural de verdade, não um cartão contido. `perspective` no viewport +
-         `rotateX` fixo no grid dão a leve inclinação 3D ("olhando pra uma
-         parede", igual a referência) — convive sem conflito com o x/y que o
-         Draggable anima no MESMO elemento (GSAP compõe os eixos de
-         transform automaticamente, mesmo padrão já usado no cartão
-         arrastável do ContributorSection). -->
+         mural de verdade, não um cartão contido. Perspectiva/inclinação 3D
+         (`perspective` + `rotateX`) é aplicada via JS só no desktop — ver
+         onMounted — e convive sem conflito com o x/y que o Draggable anima
+         no MESMO elemento (GSAP compõe os eixos de transform automaticamente,
+         mesmo padrão já usado no cartão arrastável do ContributorSection). -->
     <div
       ref="galleryViewportEl"
       class="relative left-1/2 h-[52vh] w-screen -translate-x-1/2 overflow-hidden sm:h-[62vh]"
-      style="perspective: 1600px"
     >
-      <div
-        ref="galleryGridEl"
-        class="absolute left-0 top-0 will-change-transform"
-        style="transform-style: preserve-3d"
-      >
+      <div ref="galleryGridEl" class="absolute left-0 top-0">
         <div
           v-for="tile in galleryTiles"
           :key="tile.key"
@@ -116,17 +110,28 @@ onMounted(() => {
   const minX = Math.min(0, viewportWidth - gridWidth)
   const minY = Math.min(0, viewportHeight - gridHeight)
 
+  // Perspectiva 3D (perspective + preserve-3d + rotationX/Y) só no desktop.
+  // No Android Chrome, essa combinação junto com `scroll-snap-type: y
+  // mandatory` disparava um bug real de composição: em scrolls rápidos pra
+  // cima/baixo, a camada 3D desta galeria "grudava" renderizada por cima da
+  // cena anterior. `contain: paint` (tailwind.css) já é a rede de segurança;
+  // aqui cortamos a causa raiz onde ela realmente acontece.
+  const tilt3d = !$prefersReducedMotion?.() && window.matchMedia('(min-width: 640px)').matches
+
+  if (tilt3d) {
+    galleryViewportEl.value.style.perspective = '1600px'
+    galleryGridEl.value.style.transformStyle = 'preserve-3d'
+  }
+
   // Começa centralizado no meio do mural (não encostado num canto) — dá a
   // entender, já de cara, que dá pra arrastar em qualquer direção.
-  $gsap.set(galleryGridEl.value, { x: minX / 2, y: minY / 2, rotationX: 8 })
+  $gsap.set(galleryGridEl.value, { x: minX / 2, y: minY / 2, rotationX: tilt3d ? 8 : 0 })
 
   // Leve "inclinação" reativa ao arrasto (rotationY conforme a velocidade
   // horizontal) — reforça a sensação de mural em perspectiva reagindo ao
   // gesto, igual as referências. quickTo porque é atualizado a cada frame
-  // do drag (gsap-performance: evitar recriar tween por update). Nada disso
-  // roda sob prefers-reduced-motion — só a movimentação x/y do próprio
-  // arrasto (ação direta do usuário, não decorativa) continua.
-  if (!$prefersReducedMotion?.()) {
+  // do drag (gsap-performance: evitar recriar tween por update).
+  if (tilt3d) {
     tiltXTo = $gsap.quickTo(galleryGridEl.value, 'rotationY', { duration: 0.4, ease: 'power3' })
     tiltYTo = $gsap.quickTo(galleryGridEl.value, 'rotationX', { duration: 0.4, ease: 'power3' })
   }
@@ -138,13 +143,18 @@ onMounted(() => {
     cursor: 'grab',
     onPress() {
       this.target.style.cursor = 'grabbing'
+      // `will-change` só durante o arrasto de fato, não permanente — reduz
+      // o número de camadas GPU coexistindo com o scroll-snap das cenas.
+      this.target.style.willChange = 'transform'
     },
     onRelease() {
       this.target.style.cursor = 'grab'
+      this.target.style.willChange = 'auto'
       tiltXTo?.(0)
-      tiltYTo?.(8)
+      tiltYTo?.(tilt3d ? 8 : 0)
     },
     onDrag() {
+      if (!tilt3d) return
       tiltXTo?.($gsap.utils.clamp(-10, 10, this.deltaX * 0.6))
       tiltYTo?.($gsap.utils.clamp(2, 14, 8 - this.deltaY * 0.4))
     }

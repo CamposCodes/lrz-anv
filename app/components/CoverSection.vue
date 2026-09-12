@@ -104,7 +104,13 @@ onMounted(() => {
         trigger: sectionEl.value,
         start: 'top top',
         end: 'bottom top',
-        scrub: true
+        // scrub numérico (não `true`): com scroll-snap forçando o fling a
+        // assentar na próxima cena quase instantaneamente, um scrub 1:1 fazia
+        // essa animação inteira acontecer nesse mesmo instante — mal dava pra
+        // ver as letras se dispersando. Com atraso, a timeline continua
+        // "alcançando" o progresso por ~0.9s mesmo depois do scroll físico
+        // já ter terminado, garantindo a cena inteira visível.
+        scrub: 0.9
       }
     })
 
