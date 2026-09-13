@@ -255,8 +255,17 @@ const photoPool = computed(() => {
   return photos.map(photo => ({ ...props.contributor, photo }))
 })
 
-function clampIdx(i: number) {
-  return Math.min(Math.max(i, 0), photoPool.value.length - 1)
+// Pool CIRCULAR de verdade (ver comentário "pool circular" em advanceCarousel)
+// — módulo em vez de clamp. Com clamp, assim que o cursor de um lado passava
+// da borda do array (ex.: prevCursor decrescendo abaixo de 0), ficava preso
+// nesse índice pra sempre: toda foto seguinte naquele sentido repetia a MESMA
+// (bug reportado: "na hora de voltar ele volta pra mesma foto várias vezes").
+// `((i % len) + len) % len` sempre dá a volta pro outro lado do array em vez
+// de travar na borda — com 1 foto só (`len === 1`), continua sempre 0, que é
+// o comportamento certo pra quem só tem placeholder.
+function wrapIdx(i: number) {
+  const len = photoPool.value.length
+  return ((i % len) + len) % len
 }
 
 // Legenda sincronizada: já nasce mostrando o trecho correspondente a
@@ -334,11 +343,11 @@ let nextCursor = LAYER_COUNT
 
 function pullFresh(side: 'prev' | 'next'): Contributor {
   if (side === 'next') {
-    const photo = photoPool.value[clampIdx(nextCursor)]!
+    const photo = photoPool.value[wrapIdx(nextCursor)]!
     nextCursor += 1
     return photo
   }
-  const photo = photoPool.value[clampIdx(prevCursor)]!
+  const photo = photoPool.value[wrapIdx(prevCursor)]!
   prevCursor -= 1
   return photo
 }
@@ -402,14 +411,23 @@ function stackPose(side: 'prev' | 'next', layerIndex: number) {
     x: dir * stageWidth * STACK_OFFSET_X + dir * peek,
     y: (side === 'prev' ? 1 : -1) * (stageHeight * STACK_OFFSET_Y + peek * 0.6),
     rotation: STACK_ROTATION[side] + dir * layerIndex * STACK_ROTATION_STEP,
-    scale: STACK_SCALE - layerIndex * STACK_SCALE_STEP
+    scale: STACK_SCALE - layerIndex * STACK_SCALE_STEP,
+    // Todas as camadas de uma pilha têm o mesmo z-0 (classe no template) —
+    // sem isso, o navegador desempata por ordem no DOM (mesmo bug já
+    // corrigido entre travelInEl/travelOutEl, ver comentário no template),
+    // e a camada MAIS FUNDA (última do v-for) pintava por cima da mais rasa.
+    // Resultado: a foto "da frente" que o usuário via já era a errada, e na
+    // troca a foto certa (layerIndex 0) parecia surgir do nada crescendo, e a
+    // que saía do centro parecia ir pra FRENTE do bolo em vez de pro fundo.
+    // zIndex decrescente com a profundidade resolve nos dois pontos.
+    zIndex: LAYER_COUNT - layerIndex
   }
 }
 
 function setStackPose(el: HTMLElement | null, side: 'prev' | 'next', layerIndex: number, opacity: number) {
   if (!el) return
   const pose = stackPose(side, layerIndex)
-  $gsap.set(el, { xPercent: -50, yPercent: -50, x: pose.x, y: pose.y, rotation: pose.rotation, scale: pose.scale, opacity })
+  $gsap.set(el, { xPercent: -50, yPercent: -50, x: pose.x, y: pose.y, rotation: pose.rotation, scale: pose.scale, zIndex: pose.zIndex, opacity })
 }
 
 function poseFromDataset(target: Element, key: string): number {
@@ -505,6 +523,9 @@ onMounted(() => {
         y: pose.y,
         rotation: pose.rotation,
         scale: pose.scale * 0.7,
+        // zIndex não precisa de tween (não muda com o tempo) — já fica certo
+        // desde antes da entrada animar.
+        zIndex: pose.zIndex,
         opacity: 0
       })
     })
@@ -604,7 +625,7 @@ let startY = 0
 let startTime = 0
 let dragDx = 0
 let dragDy = 0
-let activeTween: { kill: () => void } | null = null
+let activeTween: { progress: (value: number) => unknown, kill: () => void } | null = null
 
 // gsap.quickTo — um tween reaproveitado por propriedade em vez de recriar tween
 // a cada pointermove (gsap-performance oficial: followers de ponteiro em alta
@@ -627,6 +648,17 @@ function onPointerDown(e: PointerEvent) {
   startX = e.clientX
   startY = e.clientY
   startTime = performance.now()
+  // progress(1) ANTES do kill — não só matar. `.kill()` sozinho interrompe a
+  // travessia sem disparar o onComplete de commitStackTransition, que é quem
+  // faz advanceCarousel (avança o índice/deque de verdade). Arrastar de novo
+  // rápido (antes da troca anterior terminar, comportamento normal de quem
+  // arrasta várias vezes seguidas) matava a troca no meio: current/deque
+  // ficavam parados na foto de ANTES, e a próxima troca pegava essa mesma
+  // foto de novo — lido como "sempre volta pra mesma foto" (bug reportado).
+  // progress(1) força a timeline a saltar pro fim (dispara onComplete de
+  // verdade) antes de matá-la, então toda troca commitada sempre termina de
+  // avançar o carrossel, mesmo interrompida por um novo arrasto.
+  activeTween?.progress(1)
   activeTween?.kill()
   try {
     // Sem ponteiro ativo (ex.: eventos sintéticos de teste), a captura falha —
