@@ -15,7 +15,14 @@ export default defineNuxtConfig({
 
   // Transição de página global — classes .page-* em tailwind.css.
   app: {
-    pageTransition: { name: 'page', mode: 'out-in' }
+    pageTransition: { name: 'page', mode: 'out-in' },
+    head: {
+      link: [
+        { rel: 'icon', href: '/favicon.ico', sizes: '32x32' },
+        { rel: 'icon', href: '/favicon.svg', type: 'image/svg+xml' },
+        { rel: 'apple-touch-icon', href: '/apple-touch-icon.png' }
+      ]
+    }
   },
 
   imports: {
@@ -24,7 +31,6 @@ export default defineNuxtConfig({
 
   modules: [
     'shadcn-nuxt',
-    '@nuxt/image',
     '@nuxt/fonts',
     '@nuxt/scripts',
     'motion-v/nuxt', // animações (Motion for Vue)
@@ -50,12 +56,6 @@ export default defineNuxtConfig({
       crawlLinks: true,
       routes: ['/']
     }
-  },
-
-  image: {
-    format: ['webp'],
-    quality: 80,
-    screens: { xs: 320, sm: 640, md: 768, lg: 1024, xl: 1280, xxl: 1536 }
   },
 
   // Inline do CSS crítico para FCP melhor.

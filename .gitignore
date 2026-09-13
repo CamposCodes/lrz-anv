@@ -30,3 +30,6 @@ yarn-error.log*
 /playwright-report
 /test-results
 /coverage
+
+# Ferramentas locais do Claude Code
+.claude/
