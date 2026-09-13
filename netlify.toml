@@ -23,6 +23,11 @@
 
 # Fontes self-hosted — 1 ano
 [[headers]]
-  for = "/font/*"
+  for = "/fonts/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/_fonts/*"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
