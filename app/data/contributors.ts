@@ -3,9 +3,17 @@ import paiSegments from './transcripts/mensagem-pai.json'
 import vitorSegments from './transcripts/mensagem-vitor.json'
 import daviSegments from './transcripts/mensagem-davi.json'
 
+// Versão das fotos na URL. As fotos foram reexportadas dos originais (proporção
+// real, sem fundo borrado) mantendo os MESMOS nomes de arquivo — sem isso,
+// navegador e CDN (netlify.toml: /images/* com cache de 1 dia + 7 de
+// stale-while-revalidate) continuavam servindo as versões antigas 4:5 borradas.
+// Suba o número sempre que sobrescrever uma foto com o mesmo nome.
+const PHOTO_VERSION = 2
+const versioned = (path: string) => `${path}?v=${PHOTO_VERSION}`
+
 // Conteúdo real chega via WhatsApp/Drive ao longo da semana — só editar este array,
 // nenhuma seção precisa de markup novo por pessoa.
-export const contributors: Contributor[] = [
+const rawContributors: Contributor[] = [
   {
     // Teste real da legenda sincronizada (scripts/transcribe.mjs) — áudio de
     // voz de verdade (convertido de OGG/Opus pra MP3 em public/audio/), não
@@ -49,3 +57,9 @@ export const contributors: Contributor[] = [
     transcriptSegments: daviSegments
   }
 ]
+
+export const contributors: Contributor[] = rawContributors.map(c => ({
+  ...c,
+  photo: versioned(c.photo),
+  photos: c.photos?.map(versioned)
+}))

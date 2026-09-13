@@ -1,8 +1,8 @@
 <template>
   <section ref="sectionEl" class="scroll-scene relative flex min-h-dvh flex-col items-center justify-end gap-6 overflow-hidden px-6 pb-12 sm:px-12">
     <!-- Galeria em cilindro ocupando a cena inteira: TODAS as fotos de todo
-         mundo em colunas dispostas num cilindro visto de fora — a coluna do
-         meio de frente, as das bordas girando e se afastando em perspectiva.
+         mundo em colunas dispostas num cilindro visto por dentro (côncavo) — a coluna do
+         meio ao fundo, as das bordas vindo pra frente e girando pro centro.
          Gira sozinho, devagar; arrastar (mouse/touch, com inércia) gira mais
          rápido que o dedo e depois volta ao giro lento. O viewport inteiro é
          a área de arraste (antes o Draggable ficava num grid absolute de 0×0
@@ -34,12 +34,6 @@
       </div>
     </div>
 
-    <!-- Sombreamento das laterais: a superfície do cilindro escurece à medida
-         que curva pra longe da câmera — reforça a perspectiva cilíndrica.
-         Degradê estático (sem filtro por coluna, que repintaria a cada quadro). -->
-    <div class="pointer-events-none absolute inset-y-0 left-0 w-1/5 bg-gradient-to-r from-black/85 via-black/40 to-transparent" />
-    <div class="pointer-events-none absolute inset-y-0 right-0 w-1/5 bg-gradient-to-l from-black/85 via-black/40 to-transparent" />
-
     <!-- Degradê escuro no rodapé: contraste pra dica e mensagem por cima das fotos. -->
     <div class="pointer-events-none absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-black via-black/80 to-transparent" />
     <div ref="confettiHost" class="pointer-events-none absolute inset-0" />
@@ -48,10 +42,16 @@
       arraste pra ver todas as fotos
     </p>
 
-    <div ref="messageEl" class="pointer-events-none relative font-comico ml-auto max-w-md text-right text-xl leading-[1.15] tracking-tight text-white sm:text-2xl">
-      Feliz aniversário,
-      <span class="font-script text-3xl leading-none sm:text-4xl" style="color: var(--primary)">Lorenzo</span>!
-      Todo mundo que passou por aqui te deseja um ano incrível.
+    <!-- Mensagem final nas fontes principais do site: Instrument Serif (a das
+         mensagens) e Luxurious Script só no nome do Lorenzo, igual ao Cover. -->
+    <div ref="messageEl" class="pointer-events-none relative ml-auto max-w-xl text-right [text-shadow:0_2px_14px_rgba(0,0,0,0.95),0_0_2px_rgba(0,0,0,0.8)]">
+      <p class="font-instrument-serif text-3xl leading-[1.1] tracking-tight text-white sm:text-5xl">
+        Parabéns por sempre manter o espírito vivo,
+        <span class="font-script text-5xl leading-none sm:text-7xl" style="color: var(--primary)">Lorenzo</span>.
+      </p>
+      <p class="mt-3 font-instrument-serif text-lg italic leading-snug text-white/75 sm:text-2xl">
+        Todo mundo que passou por aqui te deseja o melhor.
+      </p>
     </div>
   </section>
 </template>
@@ -67,27 +67,26 @@ const messageEl = ref<HTMLElement | null>(null)
 const galleryViewportEl = ref<HTMLElement | null>(null)
 const { isVisible } = useIntersectionVisibility(sectionEl, { threshold: 0.5 })
 
-useMaskReveal(messageEl)
-
 const { $gsap, $Draggable, $prefersReducedMotion } = useNuxtApp()
 
 // Cilindro: ROWS linhas por coluna; a altura da célula sai da altura da cena
 // (medida no mount) e a largura é CELL_RATIO dela.
 const ROWS = 5
-const CELL_GAP = 8 // px entre fotos, na vertical e entre colunas
+const CELL_GAP = 20 // px entre fotos, na vertical e entre colunas
 const CELL_RATIO = 1.15 // célula mais larga que alta: a maioria das fotos é paisagem
+// Cilindro CÔNCAVO (visto por dentro): a coluna do meio fica mais ao fundo e
+// as das laterais vêm na direção da câmera, maiores e giradas pro centro.
 // Projeção de câmera feita à mão (x e escala), sem translateZ: com a
-// perspectiva por coluna, o z também puxava o x pro centro e as colunas
-// das bordas se amontoavam no meio, deixando as laterais vazias.
+// perspectiva por coluna, o z também puxaria o x pro centro.
 // EDGE_ANGLE (rad) = ângulo do cilindro que cai exatamente na borda da tela.
-const EDGE_ANGLE = 0.95
-const CAMERA_DISTANCE = 0.9 // distância da câmera, em larguras de tela (menor = mais profundidade)
-// Depois da borda as colunas ainda sobem um pouco e voltam por trás — somem
-// entre FADE_START e FADE_END, já fora da tela.
-const FADE_START = 1.05
-const FADE_END = 1.25
+const EDGE_ANGLE = 0.65
+const CAMERA_DISTANCE = 1.4 // distância da câmera, em larguras de tela (menor = curva mais forte)
+// Ângulo máximo considerado: além dele a coluna já saiu da tela (e chegaria
+// perto demais da câmera). Colunas fora da tela ficam opacidade 0 — sem
+// meio-fade: no convexo elas se amontoavam na borda como faixas fantasmas.
+const CUT_ANGLE = 1.0
 const TILT = 1 // fração do ângulo real aplicada no rotationY (1 = giro real da superfície)
-const PERSPECTIVE = 650 // perspectiva do giro de cada coluna (menor = mais acentuada)
+const PERSPECTIVE = 1200 // perspectiva do giro de cada coluna — alta o bastante pra borda que vem pra frente não alargar e invadir a coluna vizinha
 const MIN_COLUMNS = 10
 // Giro contínuo (px da superfície por segundo) e aceleração do arraste.
 const AUTO_SPEED = 28
@@ -132,6 +131,8 @@ onMounted(async () => {
   let pitch = 0
   let radius = 1
   let camera = 1
+  let halfWidth = 0
+  let halfCell = 0
   let wrapOffset = (v: number) => v
   let setters: { x: (v: number) => void, scale: (v: number) => void, rotationY: (v: number) => void, opacity: (v: number) => void }[] = []
 
@@ -140,12 +141,17 @@ onMounted(async () => {
     setters.forEach((set, c) => {
       // Posição da coluna na superfície (volta infinita) -> ângulo -> projeção.
       const theta = wrapOffset(c * pitch + offset) / radius
-      const a = $gsap.utils.clamp(-FADE_END, FADE_END, theta)
-      const depth = camera / (camera + radius * (1 - Math.cos(a)))
-      set.x(radius * Math.sin(a) * depth)
+      const a = $gsap.utils.clamp(-CUT_ANGLE, CUT_ANGLE, theta)
+      // Côncavo: quanto maior o ângulo, mais PERTO da câmera (depth > 1).
+      const depth = camera / (camera - radius * (1 - Math.cos(a)))
+      const x = radius * Math.sin(a) * depth
+      set.x(x)
       set.scale(depth)
-      set.rotationY((a * TILT * 180) / Math.PI)
-      set.opacity($gsap.utils.clamp(0, 1, (FADE_END - Math.abs(theta)) / (FADE_END - FADE_START)))
+      // Sinal invertido do convexo: a borda externa da coluna vem pra frente,
+      // a coluna "olha" pro centro da tela.
+      set.rotationY((-a * TILT * 180) / Math.PI)
+      // Visível só enquanto alguma parte da coluna está dentro da tela.
+      set.opacity(Math.abs(theta) < CUT_ANGLE && Math.abs(x) - halfCell * depth < halfWidth ? 1 : 0)
     })
   }
 
@@ -161,11 +167,15 @@ onMounted(async () => {
     viewport.style.setProperty('--cell-gap', `${CELL_GAP}px`)
 
     pitch = cellW + CELL_GAP
+    halfWidth = width / 2
+    halfCell = cellW / 2
     camera = width * CAMERA_DISTANCE
     // Raio que faz a projeção de EDGE_ANGLE cair exatamente na borda:
-    // R·sinE·D/(D + R(1−cosE)) = W/2  =>  R = (W/2·D) / (D·sinE − W/2·(1−cosE))
-    radius = (width / 2 * camera) / (camera * Math.sin(EDGE_ANGLE) - width / 2 * (1 - Math.cos(EDGE_ANGLE)))
-    columnCount.value = Math.max(MIN_COLUMNS, Math.ceil((2 * FADE_END * radius) / pitch) + 1)
+    // R·sinE·D/(D − R(1−cosE)) = W/2  =>  R = (W/2·D) / (D·sinE + W/2·(1−cosE))
+    radius = (halfWidth * camera) / (camera * Math.sin(EDGE_ANGLE) + halfWidth * (1 - Math.cos(EDGE_ANGLE)))
+    // Arco até CUT_ANGLE dos dois lados + folga: a mesma coluna nunca aparece
+    // em dois lugares.
+    columnCount.value = Math.max(MIN_COLUMNS, Math.ceil((2 * CUT_ANGLE * radius) / pitch) + 2)
     await nextTick()
 
     const cols = Array.from(viewport.querySelectorAll<HTMLElement>('.gallery-col'))
@@ -224,8 +234,11 @@ onMounted(async () => {
   window.addEventListener('resize', onResize)
 
   if (!reduced) {
-    // Entrada: a galeria surge e o cilindro chega girando rápido, desacelerando
-    // até o giro lento contínuo.
+    // Entrada: a galeria surge, o cilindro chega girando rápido desacelerando
+    // até o giro lento, e a mensagem sobe e aparece por cima. Mensagem num
+    // tween de play/reverse (não o mask reveal com scrub de antes: a seção
+    // para no snap antes do fim do trecho de scroll e as linhas ficavam presas
+    // no meio da máscara, cortadas pela metade).
     $gsap.timeline({
       scrollTrigger: {
         trigger: sectionEl.value,
@@ -235,6 +248,7 @@ onMounted(async () => {
     })
       .from(viewport, { autoAlpha: 0, duration: 0.8, ease: 'easeOut' }, 0)
       .fromTo(spin, { speed: 40 }, { speed: 1, duration: 2, ease: 'expo.out', immediateRender: false }, 0)
+      .from(messageEl.value!.children, { autoAlpha: 0, y: 24, duration: 0.9, ease: 'expo.out', stagger: 0.15 }, 0.5)
   }
 })
 
@@ -282,7 +296,7 @@ watch(isVisible, (visible) => {
 .gallery-viewport {
   --cell-h: 160px;
   --cell-w: 128px;
-  --cell-gap: 8px;
+  --cell-gap: 20px;
 }
 
 .gallery-col {
