@@ -207,15 +207,86 @@
   isolation: isolate;
 }
 
-/* Moldura polaroid — reutilizada pelo cartão central arrastável e por toda
-   camada das pilhas físicas em ContributorSection.vue. Borda clara mais
-   generosa embaixo (espaço clássico de legenda física) e sombra própria por
-   camada, no lugar do overflow-hidden/shadow-2xl sem moldura de antes. */
-.polaroid-frame {
-  box-sizing: border-box;
-  background: #f8f4ea;
-  padding: 4% 4% 11%;
-  box-shadow: 0 18px 34px -16px rgba(0, 0, 0, 0.6);
+/* ============================================================
+   CÓPIA DE LABORATÓRIO — toda foto do site é uma cópia antiga em papel
+   fotográfico: margem creme IGUAL nos quatro lados (não a base grossa de
+   polaroid) e borda serrilhada ("deckle") das cópias dos anos 50–70.
+   A moldura é padding em volta do <img>, nunca por cima dele, e a cópia
+   encolhe até o tamanho da foto: cada foto mantém a PRÓPRIA proporção
+   (retrato, paisagem, quadrada), sem corte e sem preenchimento.
+   ============================================================ */
+@layer components {
+  .print {
+    /* Raio de cada dente da borda serrilhada. */
+    --deckle: 3px;
+    /* Serrilhado = círculos ladrilhados (round encaixa número inteiro, então
+       os dentes fecham certinho nos cantos) + retângulo sólido recuado 1 raio.
+       Só as metades de fora dos círculos da borda sobram como dentes. */
+    --deckle-mask:
+      radial-gradient(circle closest-side, #000 96%, #0000) 0 0 / calc(2 * var(--deckle)) calc(2 * var(--deckle)) round,
+      linear-gradient(#000 0 0) 50% 50% / calc(100% - 2 * var(--deckle)) calc(100% - 2 * var(--deckle)) no-repeat;
+    position: relative;
+    isolation: isolate;
+    /* Margem do papel — em px/vmin, nunca %: % de padding resolve pela
+       largura do bloco PAI (stage inteiro nas pilhas, grid de largura 0 no
+       mural), não da própria cópia. */
+    --frame: clamp(8px, 2.2vmin, 20px);
+    display: block;
+    padding: var(--frame);
+    /* Só a sombra larga: uma sombra de contato apertada desenharia o
+       retângulo em volta dos dentes. */
+    box-shadow: 0 18px 34px -14px rgba(0, 0, 0, 0.75);
+  }
+
+  /* Papel: creme amarelado nas bordas (envelhecimento), serrilhado via mask
+     num pseudo — mask no próprio .print cortaria a sombra. */
+  .print::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: radial-gradient(ellipse at 50% 45%, #f5efe3 55%, #e4d8c1 100%);
+    -webkit-mask: var(--deckle-mask);
+    mask: var(--deckle-mask);
+  }
+
+  /* Foto na proporção natural: width/height auto + max-w/max-h (utilities
+     no template) = encaixa na caixa máxima sem distorcer nem cortar.
+     Grade de cópia antiga (estático): pretos levemente lavados, calor sutil. */
+  .print img {
+    display: block;
+    width: auto;
+    height: auto;
+    position: relative;
+    filter: contrast(1.04) saturate(0.92) sepia(0.1);
+  }
+
+  /* Grão por cima de foto + papel — alpha puro (sem blend-mode), então
+     arrastar a cópia não força repaint. Mesmo serrilhado do papel. */
+  .print::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 0 0 0 0 .1'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E") 0 0 / 160px 160px;
+    -webkit-mask: var(--deckle-mask);
+    mask: var(--deckle-mask);
+    pointer-events: none;
+  }
+
+  /* Verso do papel fotográfico: marca-d'água diagonal repetida, igual ao
+     verso das cópias de laboratório, com o mesmo serrilhado da frente. */
+  .print-back {
+    --deckle: 3px;
+    background-color: #f3ecdf;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='120'%3E%3Ctext x='0' y='70' transform='rotate(-24 110 60)' font-family='Georgia,serif' font-size='11' letter-spacing='3' fill='%232a2220' fill-opacity='.08'%3EPAPEL FOTOGR%C3%81FICO %C2%B7 LRZ%3C/text%3E%3C/svg%3E");
+    -webkit-mask:
+      radial-gradient(circle closest-side, #000 96%, #0000) 0 0 / calc(2 * var(--deckle)) calc(2 * var(--deckle)) round,
+      linear-gradient(#000 0 0) 50% 50% / calc(100% - 2 * var(--deckle)) calc(100% - 2 * var(--deckle)) no-repeat;
+    mask:
+      radial-gradient(circle closest-side, #000 96%, #0000) 0 0 / calc(2 * var(--deckle)) calc(2 * var(--deckle)) round,
+      linear-gradient(#000 0 0) 50% 50% / calc(100% - 2 * var(--deckle)) calc(100% - 2 * var(--deckle)) no-repeat;
+  }
 }
 
 /* Fade radial atrás da legenda solta do ContributorSection (sem virar caixa) —

@@ -1,6 +1,10 @@
 <template>
   <section ref="sectionEl" class="scroll-scene relative" style="min-height: 200dvh">
     <div ref="stageEl" class="sticky top-0 h-dvh overflow-hidden px-6">
+      <!-- Luz de segurança da câmara escura: brilho vinho atrás da cópia
+           central. Acende piscando na entrada (lâmpada ligando) e fica acesa. -->
+      <div ref="safelightEl" class="safelight pointer-events-none absolute inset-0 opacity-0" />
+
       <!-- Chuva de letras "recorte de revista" caindo antes das fotos assentarem —
            eco do Cover se dispersando. Cada letra é `absolute` e ganha x/y própria
            via GSAP (onMounted), não flex/gap — é isso que espalha elas pela largura
@@ -10,9 +14,22 @@
         <span v-for="(ch, i) in tickerLetters" :key="i" class="ticker-letter absolute left-0 top-0 inline-block" :style="{ color: TICKER_COLORS[i % TICKER_COLORS.length] }">{{ ch }}</span>
       </div>
 
-      <!-- Pilhas físicas nos cantos — bolo de fotos jogadas umas sobre as outras,
-           não uma foto solta. Cada camada é a MESMA caixa (mesmo tamanho/moldura
-           do cartão central) só que posicionada/escalada pro canto via GSAP
+      <!-- Cópias da entrada: fotos do pool atravessando a tela rápido antes das
+           reais formarem o carrossel (ver setupScene). Só enfeite — aria-hidden,
+           alt vazio. Sem loading lazy: nascem fora da tela e entrariam como
+           moldura sem foto. -->
+      <div
+        v-for="(photo, k) in reelPhotos"
+        :key="`reel-${k}`"
+        class="reel-print print pointer-events-none absolute left-1/2 w-max top-[38%] z-0 sm:top-1/2 opacity-0"
+        aria-hidden="true"
+      >
+        <img :src="photo.photo" alt="" draggable="false" decoding="async" class="max-h-[40dvh] max-w-[min(48vw,28rem)] sm:max-h-[64dvh] sm:max-w-[min(62vw,28rem)]">
+      </div>
+
+      <!-- Pilhas físicas nos cantos — cópias já reveladas secando, jogadas umas
+           sobre as outras. Cada camada é a MESMA caixa (mesmo tamanho/moldura do
+           cartão central) só que posicionada/escalada pro canto via GSAP
            transform (xPercent/yPercent centra, x/y/scale/rotation aparcam no
            canto) — assim, na troca, uma foto pode percorrer de verdade a
            distância entre pilha e centro sem precisar trocar de elemento no meio
@@ -21,25 +38,21 @@
         v-for="(photo, i) in prevDeque"
         :key="`prev-stack-${i}`"
         :ref="(el) => setStackRef('prev', i, el)"
-        class="polaroid-frame pointer-events-none absolute left-1/2 top-[38%] z-0 w-[48vw] max-w-md sm:top-1/2 sm:w-[62vw] opacity-0"
+        class="print pointer-events-none absolute left-1/2 w-max top-[38%] z-0 sm:top-1/2 opacity-0"
       >
-        <div class="aspect-[4/5] overflow-hidden">
-          <img :src="photo?.photo" :alt="photo?.name" loading="lazy" class="h-full w-full object-cover">
-        </div>
+        <img :src="photo?.photo" :alt="photo?.name" loading="lazy" draggable="false" class="max-h-[40dvh] max-w-[min(48vw,28rem)] sm:max-h-[64dvh] sm:max-w-[min(62vw,28rem)]">
       </div>
 
       <div
         v-for="(photo, i) in nextDeque"
         :key="`next-stack-${i}`"
         :ref="(el) => setStackRef('next', i, el)"
-        class="polaroid-frame pointer-events-none absolute left-1/2 top-[38%] z-0 w-[48vw] max-w-md sm:top-1/2 sm:w-[62vw] opacity-0"
+        class="print pointer-events-none absolute left-1/2 w-max top-[38%] z-0 sm:top-1/2 opacity-0"
       >
-        <div class="aspect-[4/5] overflow-hidden">
-          <img :src="photo?.photo" :alt="photo?.name" loading="lazy" class="h-full w-full object-cover">
-        </div>
+        <img :src="photo?.photo" :alt="photo?.name" loading="lazy" draggable="false" class="max-h-[40dvh] max-w-[min(48vw,28rem)] sm:max-h-[64dvh] sm:max-w-[min(62vw,28rem)]">
       </div>
 
-      <!-- Viajantes: mesma caixa/moldura das pilhas e do cartão central, ficam
+      <!-- Viajantes: mesma caixa das pilhas e do cartão central, ficam
            invisíveis em repouso. Na troca (commitStackTransition) eles é que
            percorrem de verdade o trajeto pilha↔centro — o cartão central e a
            camada de topo da pilha de destino somem por baixo enquanto isso, e
@@ -49,15 +62,11 @@
            (travelOutEl vinha depois, então pintava por cima, exatamente o
            inverso do pedido: a foto que está saindo cobrindo a que está
            virando principal). z-31 > z-30 resolve sem depender de ordem. -->
-      <div ref="travelInEl" class="polaroid-frame pointer-events-none absolute left-1/2 top-[38%] z-[31] w-[48vw] max-w-md sm:top-1/2 sm:w-[62vw] opacity-0">
-        <div class="aspect-[4/5] overflow-hidden">
-          <img ref="travelInImgEl" draggable="false" loading="lazy" class="h-full w-full object-cover">
-        </div>
+      <div ref="travelInEl" class="print pointer-events-none absolute left-1/2 w-max top-[38%] z-[31] sm:top-1/2 opacity-0">
+        <img ref="travelInImgEl" draggable="false" loading="lazy" class="max-h-[40dvh] max-w-[min(48vw,28rem)] sm:max-h-[64dvh] sm:max-w-[min(62vw,28rem)]">
       </div>
-      <div ref="travelOutEl" class="polaroid-frame pointer-events-none absolute left-1/2 top-[38%] z-30 w-[48vw] max-w-md sm:top-1/2 sm:w-[62vw] opacity-0">
-        <div class="aspect-[4/5] overflow-hidden">
-          <img ref="travelOutImgEl" draggable="false" loading="lazy" class="h-full w-full object-cover">
-        </div>
+      <div ref="travelOutEl" class="print pointer-events-none absolute left-1/2 w-max top-[38%] z-30 sm:top-1/2 opacity-0">
+        <img ref="travelOutImgEl" draggable="false" loading="lazy" class="max-h-[40dvh] max-w-[min(48vw,28rem)] sm:max-h-[64dvh] sm:max-w-[min(62vw,28rem)]">
       </div>
 
       <!-- Coluna central: só a foto arrastável (reta, sem giro estático). No mobile
@@ -72,14 +81,14 @@
            igual: pointer handler no próprio photoStageEl. -->
       <div
         ref="photoStageEl"
-        class="pointer-events-auto absolute left-1/2 top-[38%] z-20 w-[48vw] max-w-md -translate-x-1/2 -translate-y-1/2 touch-pan-y select-none sm:top-1/2 sm:w-[62vw]"
+        class="pointer-events-auto absolute left-1/2 top-[38%] z-20 w-max -translate-x-1/2 -translate-y-1/2 touch-pan-y select-none sm:top-1/2"
         :class="isDragging ? 'cursor-grabbing' : 'cursor-grab'"
         @pointerdown="onPointerDown"
         @pointermove="onPointerMove"
         @pointerup="onPointerUp"
         @pointercancel="onPointerUp"
       >
-        <div ref="photoCardEl" class="polaroid-frame polaroid-frame--center flip-3d">
+        <div ref="photoCardEl" class="flip-3d">
           <!-- `overflow-hidden` NUNCA pode dividir elemento com `preserve-3d`
                (a caixa aqui, sem overflow) — por spec, overflow != visible
                força transform-style:flat no MESMO elemento, achatando os
@@ -89,22 +98,27 @@
                FACE individualmente (folhas, sem preserve-3d próprio — não
                conflita), e este nível intermediário só tem `position` +
                `preserve-3d`, sem overflow. -->
-          <div class="relative aspect-[4/5] flip-3d">
-            <div class="flip-face absolute inset-0 overflow-hidden">
+          <div class="relative flip-3d">
+            <!-- Frente: a cópia com moldura. Fica EM FLUXO (não absolute) —
+                 é ela quem define o tamanho do cartão (foto na proporção real + margem da
+                 moldura), e o verso absolute copia essa caixa. Com um
+                 aspect fixo no wrapper, a margem espremeria a foto e o
+                 object-cover cortaria. -->
+            <div class="print print--lifted flip-face">
               <img
                 ref="photoImgEl"
                 :src="current?.photo"
                 :alt="current?.name"
                 loading="lazy"
                 draggable="false"
-                class="h-full w-full object-cover"
+                class="max-h-[40dvh] max-w-[min(48vw,28rem)] sm:max-h-[64dvh] sm:max-w-[min(62vw,28rem)]"
               >
             </div>
             <!-- Verso: mesma caixa, pré-girado 180° (estático) — só aparece
                  quando o pai (photoCardEl) gira e o backface-visibility do
-                 lado oposto (a foto) esconde a si mesmo. Fundo cru de papel
-                 (sem gradiente/textura nova) igual ao `.polaroid-frame`, pra
-                 ler como o verso físico do mesmo cartão. SEM `flex items-
+                 lado oposto (a foto) esconde a si mesmo. Verso de papel
+                 fotográfico (`.print-back`: marca-d'água de laboratório), pra
+                 ler como o verso físico da mesma cópia. SEM `flex items-
                  center` aqui: centralizar verticalmente um texto mais alto
                  que a caixa faz o overflow "vazar" pros dois lados igual,
                  mas scrollTop nunca é negativo — a metade de cima do
@@ -112,7 +126,7 @@
                  o bug reportado). Bloco normal + scroll do topo resolve:
                  scrollTop=0 já mostra o início de verdade, dá pra rolar até
                  o fim, nada fica inacessível. -->
-            <div class="flip-face flip-face--back absolute inset-0 overflow-y-auto p-[8%]" style="background: #f8f4ea">
+            <div class="print-back print--lifted flip-face flip-face--back absolute inset-0 overflow-y-auto p-[8%]">
               <!-- `contributor.message`, não `current.message`: o carrossel
                    cicla a FOTO em exibição por qualquer contribuidor via
                    drag, mas áudio/nome/transcrição no captionEl SEMPRE são
@@ -239,6 +253,7 @@
 <script setup lang="ts">
 import { RotateCcw } from '@lucide/vue'
 import type { Contributor } from '@/types'
+import { carouselWindow, step, wrapIndex } from '@/utils/carousel'
 
 const props = defineProps<{ contributor: Contributor }>()
 
@@ -254,19 +269,6 @@ const photoPool = computed(() => {
   const photos = props.contributor.photos?.length ? props.contributor.photos : [props.contributor.photo]
   return photos.map(photo => ({ ...props.contributor, photo }))
 })
-
-// Pool CIRCULAR de verdade (ver comentário "pool circular" em advanceCarousel)
-// — módulo em vez de clamp. Com clamp, assim que o cursor de um lado passava
-// da borda do array (ex.: prevCursor decrescendo abaixo de 0), ficava preso
-// nesse índice pra sempre: toda foto seguinte naquele sentido repetia a MESMA
-// (bug reportado: "na hora de voltar ele volta pra mesma foto várias vezes").
-// `((i % len) + len) % len` sempre dá a volta pro outro lado do array em vez
-// de travar na borda — com 1 foto só (`len === 1`), continua sempre 0, que é
-// o comportamento certo pra quem só tem placeholder.
-function wrapIdx(i: number) {
-  const len = photoPool.value.length
-  return ((i % len) + len) % len
-}
 
 // Legenda sincronizada: já nasce mostrando o trecho correspondente a
 // audioTime=0 (o primeiro segmento), não a mensagem inteira — antes era
@@ -313,6 +315,7 @@ const tickerEl = ref<HTMLElement | null>(null)
 const photoStageEl = ref<HTMLElement | null>(null)
 const photoCardEl = ref<HTMLElement | null>(null)
 const photoImgEl = ref<HTMLElement | null>(null)
+const safelightEl = ref<HTMLElement | null>(null)
 const travelInEl = ref<HTMLElement | null>(null)
 const travelInImgEl = ref<HTMLImageElement | null>(null)
 const travelOutEl = ref<HTMLElement | null>(null)
@@ -332,29 +335,25 @@ const TICKER_LENGTH = 48
 // está fora da tela e invisível pro usuário.
 const tickerLetters = ref(Array.from({ length: TICKER_LENGTH }, (_, i) => TICKER_POOL[i % TICKER_POOL.length]!))
 
-// Pilhas físicas: cada lado guarda LAYER_COUNT fotos (frente..fundo). Índice 0
-// é sempre a próxima a assentar no centro. São arrays de verdade (não deriváveis
-// só de um índice) porque a foto que sai do centro precisa pousar no FUNDO da
-// pilha oposta — não é a mesma posição que ela ocuparia numa sequência circular
-// simples (ver commitStackTransition/advanceCarousel).
+// Pilhas físicas: cada lado mostra LAYER_COUNT fotos (frente..fundo, índice 0
+// = a próxima a assentar no centro). Tudo deriva de UM índice no pool circular
+// (app/utils/carousel.ts): next = índice+1..+3, prev = índice−1..−3. Antes eram
+// deques com cursores separados por lado — a pilha next nascia em pool[3..5]
+// (pulando 1 e 2), a foto que saía do centro ia pro FUNDO da pilha oposta e os
+// cursores nunca recuavam, então avançar e voltar trazia outra foto. Com um
+// índice só, avançar leva a antiga atual pro TOPO da prev e voltar a traz de
+// volta, sempre.
 const LAYER_COUNT = 3
-let prevCursor = -1
-let nextCursor = LAYER_COUNT
-
-function pullFresh(side: 'prev' | 'next'): Contributor {
-  if (side === 'next') {
-    const photo = photoPool.value[wrapIdx(nextCursor)]!
-    nextCursor += 1
-    return photo
-  }
-  const photo = photoPool.value[wrapIdx(prevCursor)]!
-  prevCursor -= 1
-  return photo
-}
-
-const current = ref<Contributor>(photoPool.value[0]!)
-const prevDeque = ref<Contributor[]>(Array.from({ length: LAYER_COUNT }, () => pullFresh('prev')))
-const nextDeque = ref<Contributor[]>(Array.from({ length: LAYER_COUNT }, () => pullFresh('next')))
+const currentIndex = ref(0)
+const carousel = computed(() => carouselWindow(currentIndex.value, photoPool.value.length, LAYER_COUNT))
+const current = computed(() => photoPool.value[carousel.value.current]!)
+const prevDeque = computed(() => carousel.value.prev.map(i => photoPool.value[i]!))
+const nextDeque = computed(() => carousel.value.next.map(i => photoPool.value[i]!))
+// Fotos das cópias que passam na entrada: as que vêm ANTES da pilha prev na
+// sequência, da mais antiga (passa primeiro) até índice−4 (passa por último),
+// então a passagem lê em ordem até a foto atual.
+const reelPhotos = computed(() => Array.from({ length: REEL_COUNT }, (_, k) =>
+  photoPool.value[wrapIndex(currentIndex.value - LAYER_COUNT - REEL_COUNT + k, photoPool.value.length)]!))
 
 const prevStackEls: (HTMLElement | null)[] = Array(LAYER_COUNT).fill(null)
 const nextStackEls: (HTMLElement | null)[] = Array(LAYER_COUNT).fill(null)
@@ -436,9 +435,32 @@ function poseFromDataset(target: Element, key: string): number {
 
 const { $gsap, $prefersReducedMotion } = useNuxtApp()
 
+// gsap.context escopa os seletores ao componente e junta TODO tween/
+// ScrollTrigger criado no setup — onBeforeUnmount reverte tudo de uma vez.
+let ctx: { revert: () => void } | null = null
+
 onMounted(() => {
-  if (!$gsap || !sectionEl.value || !tickerEl.value || !photoCardEl.value || !photoImgEl.value
-    || !travelInEl.value || !travelOutEl.value || !captionEl.value
+  if (!$gsap || !sectionEl.value) return
+  ctx = $gsap.context(setupScene, sectionEl.value)
+})
+
+// Entrada simples: cópias com fotos do pool atravessam a tela da
+// direita pra esquerda, uma atrás da outra, rápido; logo atrás delas as 7
+// cópias reais entram pela direita e param nas poses do carrossel (pilhas +
+// cópia central). Só x/y/rotation/scale/opacity — sem motionPath, que deixava
+// a escala final das cópias reais em 0 e escondia a foto central.
+const REEL_COUNT = 8 // cópias com foto que passam antes das reais
+const PASS_SCALE_DESKTOP = 0.5
+const PASS_SCALE_MOBILE = 0.55
+const PASS_TILT_DEG = 3 // cópias levemente tortas, alternando, como papel de verdade
+const PASS_DURATION = 0.9 // tempo de cada cópia atravessar a tela inteira
+const PASS_STAGGER = 0.08 // intervalo entre uma cópia e a próxima
+const FORM_DURATION = 0.9 // tempo das reais da borda direita até a pose
+const FORM_STAGGER = 0.06
+
+function setupScene() {
+  if (!sectionEl.value || !tickerEl.value || !photoCardEl.value || !photoImgEl.value || !photoStageEl.value
+    || !safelightEl.value || !travelInEl.value || !travelOutEl.value || !captionEl.value
     || prevStackEls.some(el => !el) || nextStackEls.some(el => !el)) return
 
   stageWidth = stageEl.value?.clientWidth ?? window.innerWidth
@@ -475,6 +497,7 @@ onMounted(() => {
   // Movimento reduzido: pula direto pro estado final, sem entrada animada.
   if ($prefersReducedMotion?.()) {
     $gsap.set(tickerEl.value, { autoAlpha: 0 })
+    $gsap.set(safelightEl.value, { opacity: 1 })
     $gsap.set(photoCardEl.value, { opacity: 1, scale: 1 })
     prevStackEls.forEach((el, i) => setStackPose(el, 'prev', i, STACK_LAYER_OPACITY[i] ?? 0.4))
     nextStackEls.forEach((el, i) => setStackPose(el, 'next', i, STACK_LAYER_OPACITY[i] ?? 0.4))
@@ -499,37 +522,65 @@ onMounted(() => {
     y: () => -stageHeight * $gsap.utils.random(0.2, 1.2),
     rotation: () => $gsap.utils.random(-35, 35)
   })
-  $gsap.set(photoCardEl.value, { opacity: 0, scale: 0.5 })
+  $gsap.set(safelightEl.value, { opacity: 0 })
 
-  // Pilhas entram deslizando de fora da tela (esquerda/direita) até a pose de
-  // repouso de cada camada — a pose final fica guardada em dataset pra o tween
-  // com stagger usar valor-por-alvo (gsap-core: function-based values).
-  const stackEls = [...prevStackEls, ...nextStackEls] as HTMLElement[]
+  const isMobile = stageWidth < 640
+  const passScale = isMobile ? PASS_SCALE_MOBILE : PASS_SCALE_DESKTOP
+  const reelEls = Array.from(stageEl.value!.querySelectorAll<HTMLElement>('.reel-print'))
+  // Todos esses elementos têm origem no centro da cena, então "fora da tela"
+  // é meia largura do stage + a maior largura possível de uma cópia (mesmo
+  // max-w do <img>: min(48vw|62vw, 28rem)).
+  const maxPrintWidth = Math.min(window.innerWidth * (isMobile ? 0.48 : 0.62), 448)
+  const offRight = stageWidth / 2 + maxPrintWidth
+  const offLeft = -offRight
+  // Cópias passam numa faixa próxima ao centro, com leve variação
+  // de altura pra não parecer uma régua.
+  const passY = (k: number) => [0, -0.06, 0.05, -0.03, 0.07, -0.05, 0.02, -0.07][k % 8]! * stageHeight
+
+  // Pose de repouso das pilhas guardada em dataset pra o tween com stagger
+  // usar valor-por-alvo quando as reais formam o carrossel. zIndex já nasce
+  // no valor de repouso e NUNCA muda: pirâmide (centro z-20 no photoStageEl,
+  // camada 0 = 3, camada 2 = 1).
   ;(['prev', 'next'] as const).forEach((side) => {
     const els = side === 'prev' ? prevStackEls : nextStackEls
     els.forEach((el, i) => {
       if (!el) return
       const pose = stackPose(side, i)
-      const dir = side === 'prev' ? -1 : 1
       el.dataset.poseX = String(pose.x)
       el.dataset.poseY = String(pose.y)
       el.dataset.poseRotation = String(pose.rotation)
       el.dataset.poseScale = String(pose.scale)
       el.dataset.poseOpacity = String(STACK_LAYER_OPACITY[i] ?? 0.4)
-      $gsap.set(el, {
-        xPercent: -50,
-        yPercent: -50,
-        x: pose.x + dir * 140,
-        y: pose.y,
-        rotation: pose.rotation,
-        scale: pose.scale * 0.7,
-        // zIndex não precisa de tween (não muda com o tempo) — já fica certo
-        // desde antes da entrada animar.
-        zIndex: pose.zIndex,
-        opacity: 0
-      })
+      $gsap.set(el, { xPercent: -50, yPercent: -50, zIndex: pose.zIndex })
     })
   })
+  // Cópias esperando além da borda direita.
+  $gsap.set(reelEls, {
+    xPercent: -50,
+    yPercent: -50,
+    x: offRight,
+    y: (k: number) => passY(k),
+    rotation: (k: number) => (k % 2 ? -1 : 1) * PASS_TILT_DEG,
+    scale: passScale,
+    opacity: 0
+  })
+  // Reais esperando além da borda direita, já na altura da própria pose.
+  // Pré-decodifica as fotos: sem isso o navegador decodificava cada uma no
+  // quadro em que entrava na tela.
+  const stackFormEls = [2, 1, 0].flatMap(i => [nextStackEls[i], prevStackEls[i]]) as HTMLElement[]
+  ;[...reelEls, ...stackFormEls, photoCardEl.value].forEach(el => el.querySelector('img')?.decode().catch(() => {}))
+  $gsap.set(stackFormEls, {
+    x: offRight,
+    y: (_i: number, target: Element) => poseFromDataset(target, 'poseY'),
+    rotation: (_i: number, target: Element) => poseFromDataset(target, 'poseRotation'),
+    scale: (_i: number, target: Element) => poseFromDataset(target, 'poseScale'),
+    opacity: 0
+  })
+  $gsap.set(photoCardEl.value, { x: offRight, y: 0, rotation: PASS_TILT_DEG, scale: passScale, opacity: 0 })
+  // Sem arrasto até a fila se desfazer: o drag usa quickTo em x/y/rotation do
+  // mesmo cartão que a timeline anima — liberar só no fim garante que o
+  // quickTo sempre parte de x:0/y:0/rotation:0. A timeline devolve 'none' no reverse.
+  $gsap.set(photoStageEl.value, { pointerEvents: 'none' })
   $gsap.set([travelInEl.value, travelOutEl.value], { xPercent: -50, yPercent: -50, opacity: 0 })
   $gsap.set(captionEl.value, { opacity: 0, y: 16 })
 
@@ -540,7 +591,10 @@ onMounted(() => {
   $gsap.timeline({
     scrollTrigger: {
       trigger: sectionEl.value,
-      start: 'top top',
+      // 'top 2px' (não 'top top' exato): no celular (DPR 3) o scroll-snap
+      // assenta exatamente no offset da seção, e o start fracionário do
+      // ScrollTrigger às vezes fica um subpixel além — a entrada não disparava.
+      start: 'top 2px',
       toggleActions: 'play reverse play reverse'
     }
   })
@@ -553,25 +607,42 @@ onMounted(() => {
       y: () => stageHeight * 1.3,
       x: () => `+=${$gsap.utils.random(-50, 50)}`,
       rotation: () => `+=${$gsap.utils.random(-40, 40)}`,
-      duration: () => $gsap.utils.random(0.8, 1.4),
+      // Curta (0.7–1.1s): a chuva abre a cena e já está saindo por baixo
+      // quando a fila passa — e fica atrás das cópias (z auto < z das
+      // pilhas), então não disputa atenção com ela.
+      duration: () => $gsap.utils.random(0.7, 1.1),
       ease: 'power1.in',
-      stagger: { each: 0.01, from: 'random' }
+      stagger: { each: 0.008, from: 'random' }
     }, 0)
-    .to(stackEls, {
-      x: (_i, target) => poseFromDataset(target, 'poseX'),
-      y: (_i, target) => poseFromDataset(target, 'poseY'),
-      rotation: (_i, target) => poseFromDataset(target, 'poseRotation'),
-      scale: (_i, target) => poseFromDataset(target, 'poseScale'),
-      opacity: (_i, target) => poseFromDataset(target, 'poseOpacity'),
-      duration: 0.6,
-      ease: 'back.out(1.6)',
-      stagger: 0.05
-    })
-    .to(photoCardEl.value, { opacity: 1, scale: 1, duration: 0.55, ease: 'back.out(1.8)' }, '-=0.45')
-    .to(captionEl.value, { opacity: 1, y: 0, duration: 0.4, ease: 'power2.out' }, '-=0.15')
-})
+    // Luz de segurança acende como lâmpada velha: pisca, cai, firma.
+    .to(safelightEl.value, { opacity: 0.85, duration: 0.07, ease: 'none' }, 0.2)
+    .to(safelightEl.value, { opacity: 0.25, duration: 0.09, ease: 'none' }, 0.27)
+    .to(safelightEl.value, { opacity: 1, duration: 0.5, ease: 'power2.out' }, 0.36)
+    // Passagem: cópias com foto atravessam a tela inteira, uma atrás da
+    // outra. Aparecem/somem fora da tela (opacidade só troca lá fora).
+    .addLabel('pass', 0.3)
+    .set(reelEls, { opacity: 1 }, 'pass')
+    .to(reelEls, { x: offLeft, duration: PASS_DURATION, ease: 'power1.inOut', stagger: PASS_STAGGER }, 'pass')
+    .set(reelEls, { opacity: 0 }, `pass+=${(REEL_COUNT - 1) * PASS_STAGGER + PASS_DURATION}`)
+    // Formação: logo atrás da última cópia que passa, as reais entram pela
+    // direita e param nas poses — fundo das pilhas primeiro, topo por último,
+    // cópia central junto das camadas da frente.
+    .addLabel('form', `pass+=${(REEL_COUNT - 2) * PASS_STAGGER + PASS_DURATION * 0.5}`)
+    .set(stackFormEls, { opacity: (_i: number, target: Element) => poseFromDataset(target, 'poseOpacity') }, 'form')
+    .to(stackFormEls, {
+      x: (_i: number, target: Element) => poseFromDataset(target, 'poseX'),
+      duration: FORM_DURATION,
+      ease: 'expo.out',
+      stagger: FORM_STAGGER
+    }, 'form')
+    .set(photoCardEl.value, { opacity: 1 }, `form+=${FORM_STAGGER * 4}`)
+    .to(photoCardEl.value, { x: 0, rotation: 0, scale: 1, duration: FORM_DURATION, ease: 'expo.out' }, `form+=${FORM_STAGGER * 4}`)
+    .to(captionEl.value, { opacity: 1, y: 0, duration: 0.6, ease: 'power2.out' }, `form+=${FORM_STAGGER * 4 + 0.3}`)
+    // Arrasto liberado só com tudo pousado (fim da timeline); no reverse volta a 'none'.
+    .set(photoStageEl.value, { pointerEvents: 'auto' })
+}
 
-// Arraste tipo polaroide: puxa o dedo/mouse, o cartão segue 1:1 com leve giro —
+// Arraste de cópia na mesa: puxa o dedo/mouse, o cartão segue 1:1 com leve giro —
 // solta com pouca força/distância e ele volta pro centro com folga elástica
 // (back.out); solta com força, a troca vira uma travessia física na mesma
 // timeline: a foto do topo da pilha de destino sai do canto e pousa reta no
@@ -634,12 +705,25 @@ let activeTween: { progress: (value: number) => unknown, kill: () => void } | nu
 // $gsap.set combinado a cada troca (setStackPose), e misturar isso com quickTo
 // na MESMA propriedade corrompe o cache interno do quickTo (warning "not
 // eligible for reset") — por isso o hover das pilhas usa gsap.to comum.
-type QuickSetter = (value: number) => void
+type QuickSetter = ((value: number) => void) & { tween: { pause: () => void } }
 let cardXTo: QuickSetter, cardYTo: QuickSetter, cardRotTo: QuickSetter
+
+// Tween de hover vivo por camada — guardado pra poder matar ao soltar. O
+// último pointermove cria um tween que só grava o valor inicial no PRÓXIMO
+// tick; o `set(opacity: 0)` da troca roda antes, então o hover "nascia" em 0
+// e subia até 1, trazendo a foto puxada de volta ao bolo durante a viagem
+// (duplicada). overwrite:'auto' não pega esse caso (tween ainda não começou).
+const peekTweens = new Map<HTMLElement, { kill: () => void }>()
 
 function setPeekHover(el: HTMLElement | null, scale: number, opacity: number) {
   if (!el) return
-  $gsap.to(el, { scale, opacity, duration: 0.3, ease: 'power2', overwrite: 'auto' })
+  peekTweens.get(el)?.kill()
+  peekTweens.set(el, $gsap.to(el, { scale, opacity, duration: 0.3, ease: 'power2' }))
+}
+
+function killPeekHover() {
+  peekTweens.forEach(tween => tween.kill())
+  peekTweens.clear()
 }
 
 function onPointerDown(e: PointerEvent) {
@@ -687,18 +771,11 @@ function onPointerMove(e: PointerEvent) {
   setPeekHover(prevStackEls[0], towardNext ? STACK_SCALE : STACK_SCALE + pull * 0.12, towardNext ? frontOpacity : frontOpacity + pull * (1 - frontOpacity))
 }
 
-// Avança o carrossel: tira a foto da frente da pilha de destino (vira a atual),
-// repõe o fundo dessa pilha com uma foto nova do pool circular, e manda a foto
-// que estava no centro pro fundo da pilha OPOSTA — fecha o ciclo sem depender
-// de um índice único (a foto que sai do centro não "seria" a próxima da pilha
-// oposta numa sequência simples, ela precisa ser empurrada pra lá de propósito).
-function advanceCarousel(destSide: 'prev' | 'next'): Contributor {
-  const destDeque = destSide === 'next' ? nextDeque : prevDeque
-  const oppositeDeque = destSide === 'next' ? prevDeque : nextDeque
-  const oldCurrent = current.value
-  current.value = destDeque.value.shift()!
-  destDeque.value.push(pullFresh(destSide))
-  oppositeDeque.value[LAYER_COUNT - 1] = oldCurrent
+// Avança o carrossel um passo no sentido da pilha de destino: a frente dela
+// vira a atual e a antiga atual vira o TOPO da pilha oposta (current/prevDeque/
+// nextDeque são computed de currentIndex, ver carouselWindow).
+function advanceCarousel(destSide: 'prev' | 'next') {
+  currentIndex.value = step(currentIndex.value, destSide, photoPool.value.length)
 
   // Toda foto nova entra de frente — sem isso, trocar de contribuidor com o
   // cartão virado deixaria o texto do PRÓXIMO já visível antes do usuário
@@ -708,8 +785,6 @@ function advanceCarousel(destSide: 'prev' | 'next'): Contributor {
     flipTween?.kill()
     $gsap.set(photoCardEl.value, { rotationY: 0 })
   }
-
-  return oldCurrent
 }
 
 // Fallback sério pro prefers-reduced-motion: sem arco, sem física, sem pouso
@@ -732,7 +807,7 @@ function reducedMotionCommit(destSide: 'prev' | 'next') {
   oppositeSideEls.forEach((el, i) => setStackPose(el, oppositeSide, i, STACK_LAYER_OPACITY[i] ?? 0.4))
 }
 
-// A travessia física de verdade: dois viajantes (mesma caixa/moldura das
+// A travessia física de verdade: dois viajantes (mesma caixa das
 // pilhas e do centro) percorrem, NA MESMA TIMELINE, trajetos opostos —
 // keyframes com um ponto intermediário elevado (arco) em vez de x/y/rotation/
 // scale instantâneos. Duração e altura do arco herdam a velocidade real do
@@ -764,7 +839,9 @@ function commitStackTransition(destSide: 'prev' | 'next', duration: number, velo
 
   const inStart = stackPose(destSide, 0)
   const inEnd = { x: 0, y: 0, rotation: $gsap.utils.random(-4, 4), scale: 1 }
-  const outEnd = stackPose(oppositeSide, LAYER_COUNT - 1)
+  // A foto que sai do centro pousa no TOPO (camada 0) da pilha oposta — é ela
+  // que volta se o usuário arrastar pro outro lado (antes mirava o fundo).
+  const outEnd = stackPose(oppositeSide, 0)
   const dirSign = destSide === 'next' ? 1 : -1
   const arcHeight = $gsap.utils.clamp(30, 90, $gsap.utils.mapRange(THROW_VELOCITY, 1.4, 30, 90, velocity))
 
@@ -837,26 +914,47 @@ function commitStackTransition(destSide: 'prev' | 'next', duration: number, velo
     ease: 'power2.inOut'
   }, riseDuration)
 
+  // As pilhas acompanham a troca: a oposta desce uma camada (abre o topo pra
+  // foto que chega; a mais funda some) e a de destino sobe uma (ocupa o lugar
+  // da frente que saiu). No onComplete setStackPose devolve cada elemento à
+  // própria camada já com a foto deslocada pelo currentIndex — mesma imagem na
+  // mesma pose, então a troca de src não aparece. zIndex fica fora do tween
+  // (não interpola) e overwrite mata o hover do arrasto nesses elementos.
+  const shiftLayer = (el: HTMLElement | null, side: 'prev' | 'next', toLayer: number) => {
+    if (!el) return
+    const { zIndex: _zIndex, ...pose } = stackPose(side, toLayer)
+    tl.to(el, { ...pose, opacity: STACK_LAYER_OPACITY[toLayer] ?? 0, duration, ease: 'power2.inOut', overwrite: 'auto' }, 0)
+  }
+  oppositeEls.forEach((el, i) => shiftLayer(el, oppositeSide, i + 1))
+  destEls.forEach((el, i) => i > 0 && shiftLayer(el, destSide, i - 1))
+
   activeTween = tl
 }
 
 function onPointerUp() {
   if (!isDragging.value || !photoCardEl.value) return
   isDragging.value = false
+  // Soltou: o cartão para de seguir o ponteiro. Num arremesso rápido os
+  // quickTo ainda estavam no meio do caminho (~0.3s) e terminavam DEPOIS do
+  // onComplete da troca, sobrescrevendo o x:0/rotation:0 — a nova foto
+  // aparecia deslocada e torta. Pausar é seguro: o próximo pointermove chama
+  // resetTo, que dá play de novo.
+  ;[cardXTo, cardYTo, cardRotTo].forEach(follow => follow.tween.pause())
 
   const elapsed = Math.max(1, performance.now() - startTime)
   const distance = Math.hypot(dragDx, dragDy)
   const velocity = distance / elapsed
   const wantsNext = dragDx < 0
   const committed = distance > THROW_DISTANCE || velocity > THROW_VELOCITY
+  killPeekHover()
 
   if (!committed) {
-    // Folga: sem força/distância suficiente, volta pro centro com leve exagero
-    // elástico em vez de trocar de pilha — nada nas pilhas se move.
+    // Folga: sem força/distância suficiente, a cópia desliza de volta pro
+    // centro (papel na mesa não quica) — nada nas pilhas se move.
     const frontOpacity = STACK_LAYER_OPACITY[0] ?? 0.9
     setPeekHover(prevStackEls[0], STACK_SCALE, frontOpacity)
     setPeekHover(nextStackEls[0], STACK_SCALE, frontOpacity)
-    activeTween = $gsap.to(photoCardEl.value, { x: 0, y: 0, rotation: 0, duration: 0.45, ease: 'back.out(1.6)' })
+    activeTween = $gsap.to(photoCardEl.value, { x: 0, y: 0, rotation: 0, duration: 0.5, ease: 'power3.out' })
     dragDx = 0
     dragDy = 0
     return
@@ -872,6 +970,7 @@ function onPointerUp() {
 onBeforeUnmount(() => {
   activeTween?.kill()
   flipTween?.kill()
+  ctx?.revert()
 })
 </script>
 
@@ -889,20 +988,29 @@ onBeforeUnmount(() => {
   opacity: 0;
 }
 
-/* Sombra mais forte só no cartão central — destaca "foto na frente" do bolo
-   de fotos atrás, que usa a sombra padrão mais fraca do `.polaroid-frame`
-   (tailwind.css). Duas camadas (contato apertado + ambiente largo) em vez de
-   uma sombra só, pra ler como profundidade de verdade, não só um blur maior.
-   Estático (box-shadow não entra no transform do GSAP), então não interfere
-   em nenhuma animação — continua valendo durante o arrasto/travessia, já
-   que o cartão central é sempre "a foto da frente" independente da pose. */
-.polaroid-frame--center {
+/* Sombra mais forte só nas duas faces do cartão central — destaca "a cópia
+   da frente" do bolo atrás, que usa a sombra padrão mais fraca do `.print`
+   (tailwind.css). Fica nas FACES (não no photoCardEl) porque a sombra precisa
+   girar junto com cada lado no flip 3D. */
+.print--lifted {
   box-shadow:
-    0 8px 16px -6px rgba(0, 0, 0, 0.55),
+    0 10px 18px -8px rgba(0, 0, 0, 0.55),
     0 32px 60px -20px rgba(0, 0, 0, 0.85);
 }
 
-/* Flip 3D do cartão: photoCardEl (o pai, `.polaroid-frame`) é quem recebe a
+/* Luz de segurança: halo vinho centrado na cópia central (mesmo anchor
+   top-[38%] mobile / top-1/2 desktop do template). Só opacidade anima. */
+.safelight {
+  background: radial-gradient(70% 52% at 50% 38%, rgba(160, 26, 14, 0.62) 0%, rgba(82, 0, 0, 0.32) 45%, transparent 80%);
+}
+
+@media (min-width: 640px) {
+  .safelight {
+    background: radial-gradient(48% 70% at 50% 50%, rgba(160, 26, 14, 0.62) 0%, rgba(82, 0, 0, 0.32) 45%, transparent 80%);
+  }
+}
+
+/* Flip 3D do cartão: photoCardEl (o pai) é quem recebe a
    animação de `rotationY` via GSAP (toggleFlip) — precisa de preserve-3d pra
    propagar o espaço 3D pros filhos, e o próprio wrapper da foto (o segundo
    nível, `aspect-[4/5]`) também, senão o back-face-visibility dos dois
