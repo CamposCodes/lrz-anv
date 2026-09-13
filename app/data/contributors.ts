@@ -33,10 +33,12 @@ export const contributors: Contributor[] = [
     transcriptSegments: paiSegments
   },
   {
-    // Foto ainda não chegou — placeholder até o Vitor mandar as fotos reais
-    // (aí processa com o mesmo pipeline de scripts/optimize-pai-photos.mjs).
+    // Fotos reais (WhatsApp) em 4:5 WebP, mesmo tratamento do Pai: foto inteira
+    // + fundo borrado dela mesma; retratos 3:4 só levam corte leve. Sem upscale
+    // (vitor-02/10/11 vieram pequenas). vitor-01 = capa.
     name: 'Vitor, Irmão',
-    photo: 'https://picsum.photos/seed/lorenzo-vitor/800/1000',
+    photo: '/images/vitor/vitor-01.webp',
+    photos: Array.from({ length: 13 }, (_, i) => `/images/vitor/vitor-${String(i + 1).padStart(2, '0')}.webp`),
     audio: '/audio/mensagem-vitor.mp3',
     message: vitorSegments.map(s => s.text).join(' '),
     transcriptSegments: vitorSegments
