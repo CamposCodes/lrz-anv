@@ -42,9 +42,10 @@ export const contributors: Contributor[] = [
     transcriptSegments: vitorSegments
   },
   {
-    // Idem — placeholder até o Davi mandar as fotos reais.
+    // Foto única (WhatsApp) — recortada pra 4:5 (polaroid) mantendo os dois
+    // rostos + skate, convertida pra WebP na resolução nativa (899px, sem upscale).
     name: 'Davi Dooup, Degrau',
-    photo: 'https://picsum.photos/seed/lorenzo-davi/800/1000',
+    photo: '/images/davi/davi-01.webp',
     audio: '/audio/mensagem-davi.mp3',
     message: daviSegments.map(s => s.text).join(' '),
     transcriptSegments: daviSegments
