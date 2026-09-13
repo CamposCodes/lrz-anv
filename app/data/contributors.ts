@@ -2,6 +2,7 @@ import type { Contributor } from '@/types'
 import paiSegments from './transcripts/mensagem-pai.json'
 import vitorSegments from './transcripts/mensagem-vitor.json'
 import daviSegments from './transcripts/mensagem-davi.json'
+import joaoRicardoSegments from './transcripts/mensagem-joao-ricardo.json'
 
 // Versão das fotos na URL. As fotos foram reexportadas dos originais (proporção
 // real, sem fundo borrado) mantendo os MESMOS nomes de arquivo — sem isso,
@@ -57,21 +58,28 @@ const rawContributors: Contributor[] = [
     transcriptSegments: daviSegments
   },
   {
-    // Foto do show (arquivo compartilhado com o Licurci — os dois aparecem
-    // nela), WebP na proporção original 3:2, sem corte. Áudio ainda não
-    // chegou: quando chegar, salvar em public/audio/mensagem-joao-paulo.mp3,
-    // rodar scripts/transcribe.mjs e preencher audio/message/transcriptSegments
-    // igual aos de cima. Sem mensagem, a seção só não mostra legenda nem verso.
-    name: 'João Paulo',
+    // Foto do show, WebP na proporção original 3:2, sem corte. Áudio ainda não
+    // chegou: quando chegar, salvar em public/audio/mensagem-licurci.mp3, rodar
+    // scripts/transcribe.mjs e preencher audio/message/transcriptSegments igual
+    // aos de cima. Sem mensagem, a seção só não mostra legenda nem verso.
+    name: 'Licurci MC Degrau',
     photo: '/images/degrau/degrau-show-01.webp',
     message: ''
   },
   {
-    // Mesma foto do show do João Paulo (os dois nela). Áudio pendente — mesmo
-    // processo: public/audio/mensagem-licurci.mp3 + scripts/transcribe.mjs.
-    name: 'Licurci MC Degrau',
-    photo: '/images/degrau/degrau-show-01.webp',
-    message: ''
+    // Fotos reais (WhatsApp) em WebP na proporção original, sem upscale;
+    // joao-ricardo-01 (abraço no show) = capa. Áudio convertido do .ogg com
+    // ffmpeg: silêncio das pontas encurtado, passa-alta 70Hz, loudnorm
+    // -16.5 LUFS / pico -1.5 dBTP, MP3 mono 44.1kHz 96kbps (mesmo formato dos
+    // outros). Transcrição do Whisper dividida em frases e alinhada ao tempo
+    // real de cada palavra (--word_timestamps); corrigidos "Vale"→"Salve",
+    // "tem"→"tenho" e "Lorena"→"Lorenzo".
+    name: 'João Ricardo, Cotto',
+    photo: '/images/joao-ricardo/joao-ricardo-01.webp',
+    photos: Array.from({ length: 4 }, (_, i) => `/images/joao-ricardo/joao-ricardo-${String(i + 1).padStart(2, '0')}.webp`),
+    audio: '/audio/mensagem-joao-ricardo.mp3',
+    message: joaoRicardoSegments.map(s => s.text).join(' '),
+    transcriptSegments: joaoRicardoSegments
   }
 ]
 
