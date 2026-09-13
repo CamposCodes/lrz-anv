@@ -1,45 +1,54 @@
 <template>
-  <section ref="sectionEl" class="scroll-scene relative flex min-h-dvh flex-col items-center justify-center gap-10 overflow-hidden px-6 py-24 sm:px-12">
-    <div ref="confettiHost" class="pointer-events-none absolute inset-0" />
-
-    <!-- Galeria arrastável: TODAS as fotos de todo mundo, ladrilhadas várias
-         vezes num grid bem maior que a tela — arrastar (mouse/touch, com
-         inércia) revela mais do "mural" pros lados. `w-screen left-1/2
-         -translate-x-1/2` é o truque padrão de full-bleed (a seção tem
-         padding lateral, a galeria quebra pra fora dele) pra parecer um
-         mural de verdade, não um cartão contido. Perspectiva/inclinação 3D
-         (`perspective` + `rotateX`) é aplicada via JS só no desktop — ver
-         onMounted — e convive sem conflito com o x/y que o Draggable anima
-         no MESMO elemento (GSAP compõe os eixos de transform automaticamente,
-         mesmo padrão já usado no cartão arrastável do ContributorSection). -->
+  <section ref="sectionEl" class="scroll-scene relative flex min-h-dvh flex-col items-center justify-end gap-6 overflow-hidden px-6 pb-12 sm:px-12">
+    <!-- Galeria em cilindro ocupando a cena inteira: TODAS as fotos de todo
+         mundo em colunas dispostas num cilindro visto de fora — a coluna do
+         meio de frente, as das bordas girando e se afastando em perspectiva.
+         Gira sozinho, devagar; arrastar (mouse/touch, com inércia) gira mais
+         rápido que o dedo e depois volta ao giro lento. O viewport inteiro é
+         a área de arraste (antes o Draggable ficava num grid absolute de 0×0
+         com cartões pointer-events-none — nenhum toque chegava nele).
+         `touch-pan-y`: só o gesto horizontal é da galeria, rolar a página
+         continua livre no celular. -->
     <div
       ref="galleryViewportEl"
-      class="relative left-1/2 h-[52vh] w-screen -translate-x-1/2 overflow-hidden sm:h-[62vh]"
+      class="gallery-viewport absolute inset-0 cursor-grab touch-pan-y select-none overflow-hidden"
+      role="region"
+      aria-label="Galeria com todas as fotos — arraste para os lados"
     >
-      <div ref="galleryGridEl" class="absolute left-0 top-0">
+      <div
+        v-for="(column, c) in galleryColumns"
+        :key="c"
+        class="gallery-col pointer-events-none absolute left-1/2 top-1/2 flex flex-col items-center"
+      >
+        <!-- Célula fixa com a cópia centralizada: cada foto mantém a própria
+             proporção (paisagem mais baixa, retrato mais estreito). -->
         <div
-          v-for="tile in galleryTiles"
+          v-for="tile in column"
           :key="tile.key"
-          class="polaroid-frame pointer-events-none absolute"
-          :style="{
-            left: `${tile.x}px`,
-            top: `${tile.y}px`,
-            width: `${TILE_WIDTH}px`,
-            transform: `rotate(${tile.rotation}deg)`
-          }"
+          class="gallery-cell flex items-center justify-center"
         >
-          <div class="aspect-[4/5] overflow-hidden">
-            <img :src="tile.photo" :alt="tile.name" loading="lazy" draggable="false" class="h-full w-full object-cover">
+          <div class="print [--frame:6px]">
+            <img :src="tile.photo" :alt="tile.name" loading="lazy" draggable="false" class="gallery-img">
           </div>
         </div>
       </div>
     </div>
 
-    <p class="pointer-events-none text-center text-xs text-white/60">
+    <!-- Sombreamento das laterais: a superfície do cilindro escurece à medida
+         que curva pra longe da câmera — reforça a perspectiva cilíndrica.
+         Degradê estático (sem filtro por coluna, que repintaria a cada quadro). -->
+    <div class="pointer-events-none absolute inset-y-0 left-0 w-1/5 bg-gradient-to-r from-black/85 via-black/40 to-transparent" />
+    <div class="pointer-events-none absolute inset-y-0 right-0 w-1/5 bg-gradient-to-l from-black/85 via-black/40 to-transparent" />
+
+    <!-- Degradê escuro no rodapé: contraste pra dica e mensagem por cima das fotos. -->
+    <div class="pointer-events-none absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-black via-black/80 to-transparent" />
+    <div ref="confettiHost" class="pointer-events-none absolute inset-0" />
+
+    <p class="pointer-events-none relative text-center text-xs text-white/70">
       arraste pra ver todas as fotos
     </p>
 
-    <div ref="messageEl" class="font-comico ml-auto max-w-md text-right text-xl leading-[1.15] tracking-tight text-white sm:text-2xl">
+    <div ref="messageEl" class="pointer-events-none relative font-comico ml-auto max-w-md text-right text-xl leading-[1.15] tracking-tight text-white sm:text-2xl">
       Feliz aniversário,
       <span class="font-script text-3xl leading-none sm:text-4xl" style="color: var(--primary)">Lorenzo</span>!
       Todo mundo que passou por aqui te deseja um ano incrível.
@@ -55,146 +64,184 @@ const props = defineProps<{ contributors: Contributor[] }>()
 const sectionEl = ref<HTMLElement | null>(null)
 const confettiHost = ref<HTMLElement | null>(null)
 const messageEl = ref<HTMLElement | null>(null)
+const galleryViewportEl = ref<HTMLElement | null>(null)
 const { isVisible } = useIntersectionVisibility(sectionEl, { threshold: 0.5 })
 
 useMaskReveal(messageEl)
 
 const { $gsap, $Draggable, $prefersReducedMotion } = useNuxtApp()
 
-// Grid bem maior que a tela (ladrilha as fotos várias vezes) — com só 3-4
-// contribuidores, um grid do tamanho da tela pareceria vazio; repetir é o
-// que faz parecer um mural cheio de verdade, como as referências (cadeiras/
-// selos). Rotação por posição é DETERMINÍSTICA (fórmula, não Math.random)
-// pelo mesmo motivo do `.ransom-letter`/ticker do resto do site: zero risco
-// de mismatch servidor/cliente mesmo que este grid particular só ganhe vida
-// no cliente (Draggable é client-only).
-const TILE_WIDTH = 150
-const TILE_GAP = 22
-const GRID_COLS = 8
-const GRID_ROWS = 6
+// Cilindro: ROWS linhas por coluna; a altura da célula sai da altura da cena
+// (medida no mount) e a largura é CELL_RATIO dela.
+const ROWS = 5
+const CELL_GAP = 8 // px entre fotos, na vertical e entre colunas
+const CELL_RATIO = 1.15 // célula mais larga que alta: a maioria das fotos é paisagem
+// Projeção de câmera feita à mão (x e escala), sem translateZ: com a
+// perspectiva por coluna, o z também puxava o x pro centro e as colunas
+// das bordas se amontoavam no meio, deixando as laterais vazias.
+// EDGE_ANGLE (rad) = ângulo do cilindro que cai exatamente na borda da tela.
+const EDGE_ANGLE = 0.95
+const CAMERA_DISTANCE = 0.9 // distância da câmera, em larguras de tela (menor = mais profundidade)
+// Depois da borda as colunas ainda sobem um pouco e voltam por trás — somem
+// entre FADE_START e FADE_END, já fora da tela.
+const FADE_START = 1.05
+const FADE_END = 1.25
+const TILT = 1 // fração do ângulo real aplicada no rotationY (1 = giro real da superfície)
+const PERSPECTIVE = 650 // perspectiva do giro de cada coluna (menor = mais acentuada)
+const MIN_COLUMNS = 10
+// Giro contínuo (px da superfície por segundo) e aceleração do arraste.
+const AUTO_SPEED = 28
+const DRAG_BOOST = 1.8
 
-// Achata TODAS as fotos de todo mundo (quem tem `photos` — várias fotos reais —
-// contribui com cada uma; quem só tem `photo` contribui com uma) num pool só,
-// e o grid cicla por esse pool em vez de por contribuidor. Com o Pai tendo 19
-// fotos reais, o mural fica de verdade variado em vez de repetir uma só foto
-// por pessoa 48 vezes.
+// Achata TODAS as fotos de todo mundo num pool só (quem tem `photos` contribui
+// com cada uma; quem só tem `photo`, com uma).
 const photoPool = computed(() => props.contributors.flatMap(
   c => (c.photos?.length ? c.photos : [c.photo]).map(photo => ({ photo, name: c.name }))
 ))
 
-const galleryTiles = computed(() => {
+// Quantidade de colunas: o bastante pra cobrir o arco visível do cilindro sem
+// a mesma coluna aparecer nas duas bordas (recalculada no mount, ver layout()).
+const columnCount = ref(MIN_COLUMNS)
+
+// Fotos alinhadas (sem giro por foto): a curvatura vem só do cilindro.
+const galleryColumns = computed(() => {
   const pool = photoPool.value
   if (!pool.length) return []
-  const tileHeight = TILE_WIDTH * 1.25 + (TILE_WIDTH * 1.25) / 9 // aspect-[4/5] + a "moldura" do .polaroid-frame
-  return Array.from({ length: GRID_COLS * GRID_ROWS }, (_, i) => {
-    const col = i % GRID_COLS
-    const row = Math.floor(i / GRID_COLS)
+  const cols = Math.max(columnCount.value, Math.ceil(pool.length / ROWS))
+  return Array.from({ length: cols }, (_, c) => Array.from({ length: ROWS }, (_, r) => {
+    const i = c * ROWS + r
     const entry = pool[i % pool.length]!
-    return {
-      key: i,
-      photo: entry.photo,
-      name: entry.name,
-      x: col * (TILE_WIDTH + TILE_GAP),
-      y: row * (tileHeight + TILE_GAP),
-      rotation: ((i * 37) % 7) - 3
-    }
-  })
+    return { key: i, photo: entry.photo, name: entry.name }
+  }))
 })
 
-const galleryViewportEl = ref<HTMLElement | null>(null)
-const galleryGridEl = ref<HTMLElement | null>(null)
 let galleryDraggable: { kill: () => void }[] | null = null
-let tiltXTo: ((v: number) => void) | null = null
+let tick: (() => void) | null = null
+let onResize: (() => void) | null = null
 
-onMounted(() => {
-  if (!$gsap || !$Draggable || !galleryViewportEl.value || !galleryGridEl.value || !galleryTiles.value.length) return
+onMounted(async () => {
+  const viewport = galleryViewportEl.value
+  if (!$gsap || !$Draggable || !viewport || !photoPool.value.length) return
 
-  const tileHeight = TILE_WIDTH * 1.25 + (TILE_WIDTH * 1.25) / 9
-  const gridWidth = GRID_COLS * (TILE_WIDTH + TILE_GAP)
-  const gridHeight = GRID_ROWS * (tileHeight + TILE_GAP)
-  const viewportWidth = galleryViewportEl.value.clientWidth
-  const viewportHeight = galleryViewportEl.value.clientHeight
+  const reduced = $prefersReducedMotion?.()
+  // Proxy fora do DOM: o Draggable arrasta ESTE elemento (x) — o viewport é só
+  // o gatilho do gesto. Offset final = giro automático + arraste × DRAG_BOOST.
+  const proxy = document.createElement('div')
+  const spin = { offset: 0, speed: reduced ? 0 : 1 }
+  let dragging = false
+  let pitch = 0
+  let radius = 1
+  let camera = 1
+  let wrapOffset = (v: number) => v
+  let setters: { x: (v: number) => void, scale: (v: number) => void, rotationY: (v: number) => void, opacity: (v: number) => void }[] = []
 
-  const minX = Math.min(0, viewportWidth - gridWidth)
-  const minY = Math.min(0, viewportHeight - gridHeight)
-
-  // Perspectiva 3D (perspective + preserve-3d + rotationX/Y) só no desktop.
-  // No Android Chrome, essa combinação junto com `scroll-snap-type: y
-  // mandatory` disparava um bug real de composição: em scrolls rápidos pra
-  // cima/baixo, a camada 3D desta galeria "grudava" renderizada por cima da
-  // cena anterior. `contain: paint` (tailwind.css) já é a rede de segurança;
-  // aqui cortamos a causa raiz onde ela realmente acontece.
-  const tilt3d = !$prefersReducedMotion?.() && window.matchMedia('(min-width: 640px)').matches
-
-  if (tilt3d) {
-    galleryViewportEl.value.style.perspective = '1600px'
-    galleryGridEl.value.style.transformStyle = 'preserve-3d'
+  const render = () => {
+    const offset = spin.offset + (Number($gsap.getProperty(proxy, 'x')) || 0) * DRAG_BOOST
+    setters.forEach((set, c) => {
+      // Posição da coluna na superfície (volta infinita) -> ângulo -> projeção.
+      const theta = wrapOffset(c * pitch + offset) / radius
+      const a = $gsap.utils.clamp(-FADE_END, FADE_END, theta)
+      const depth = camera / (camera + radius * (1 - Math.cos(a)))
+      set.x(radius * Math.sin(a) * depth)
+      set.scale(depth)
+      set.rotationY((a * TILT * 180) / Math.PI)
+      set.opacity($gsap.utils.clamp(0, 1, (FADE_END - Math.abs(theta)) / (FADE_END - FADE_START)))
+    })
   }
 
-  // Começa centralizado no meio do mural (não encostado num canto) — dá a
-  // entender, já de cara, que dá pra arrastar em qualquer direção.
-  $gsap.set(galleryGridEl.value, { x: minX / 2, y: minY / 2, rotationX: tilt3d ? 8 : 0 })
+  // Mede a cena e monta o cilindro: tamanho de célula, raio, colunas,
+  // setters. Roda no mount e em cada resize.
+  const layout = async () => {
+    const width = viewport.clientWidth
+    const height = viewport.clientHeight
+    const cellH = Math.floor((height - CELL_GAP * (ROWS + 1)) / ROWS)
+    const cellW = Math.round(cellH * CELL_RATIO)
+    viewport.style.setProperty('--cell-h', `${cellH}px`)
+    viewport.style.setProperty('--cell-w', `${cellW}px`)
+    viewport.style.setProperty('--cell-gap', `${CELL_GAP}px`)
 
-  // Leve "inclinação" reativa ao arrasto (rotationY conforme a velocidade
-  // horizontal) — reforça a sensação de mural em perspectiva reagindo ao
-  // gesto, igual as referências. quickTo porque é atualizado a cada frame
-  // do drag (gsap-performance: evitar recriar tween por update). rotationX
-  // fica fixa (setada uma vez acima) — sem drag vertical não há velocidade
-  // de eixo Y pra reagir.
-  if (tilt3d) {
-    tiltXTo = $gsap.quickTo(galleryGridEl.value, 'rotationY', { duration: 0.4, ease: 'power3' })
+    pitch = cellW + CELL_GAP
+    camera = width * CAMERA_DISTANCE
+    // Raio que faz a projeção de EDGE_ANGLE cair exatamente na borda:
+    // R·sinE·D/(D + R(1−cosE)) = W/2  =>  R = (W/2·D) / (D·sinE − W/2·(1−cosE))
+    radius = (width / 2 * camera) / (camera * Math.sin(EDGE_ANGLE) - width / 2 * (1 - Math.cos(EDGE_ANGLE)))
+    columnCount.value = Math.max(MIN_COLUMNS, Math.ceil((2 * FADE_END * radius) / pitch) + 1)
+    await nextTick()
+
+    const cols = Array.from(viewport.querySelectorAll<HTMLElement>('.gallery-col'))
+    const total = cols.length * pitch
+    wrapOffset = $gsap.utils.wrap(-total / 2, total / 2) as (v: number) => number
+    // Perspectiva POR COLUNA (transformPerspective), sem preserve-3d no pai:
+    // a combinação preserve-3d + scroll-snap disparava um bug de composição no
+    // Chrome do Android (a camada 3D "grudava" sobre a cena anterior).
+    $gsap.set(cols, { xPercent: -50, yPercent: -50, transformPerspective: PERSPECTIVE })
+    setters = cols.map(col => ({
+      x: $gsap.quickSetter(col, 'x', 'px') as (v: number) => void,
+      scale: $gsap.quickSetter(col, 'scale') as (v: number) => void,
+      rotationY: $gsap.quickSetter(col, 'rotationY', 'deg') as (v: number) => void,
+      opacity: $gsap.quickSetter(col, 'opacity') as (v: number) => void
+    }))
+    render()
   }
 
-  // `type: 'x'` (não 'x,y'): o GSAP Draggable SEMPRE força `touch-action: none`
-  // quando arrasta nos dois eixos (allowX === allowY na fonte do plugin, sem
-  // exceção via config) — no celular isso bloqueava o scroll nativo da PÁGINA
-  // toda vez que o gesto de rolar começava em cima da galeria (52-62% da
-  // tela), travando a rolagem no meio da seção. Com um único eixo, o
-  // Draggable aplica `touch-action: pan-y`, liberando o navegador pra rolar
-  // verticalmente igual antes — só o arrasto horizontal continua sob o GSAP.
-  // Sem perda de conteúdo: o grid só repete ciclicamente as mesmas fotos
-  // (ver `galleryTiles` acima), então linhas fora do recorte vertical
-  // estático não escondem nenhuma foto única.
-  const draggables = $Draggable.create(galleryGridEl.value, {
+  await layout()
+
+  // Giro contínuo no ticker do GSAP (mesmo relógio das animações). Parado
+  // enquanto o dedo segura a galeria e quando a cena não está na tela.
+  tick = () => {
+    if (dragging || !isVisible.value || !spin.speed) return
+    spin.offset -= AUTO_SPEED * spin.speed * ($gsap.ticker.deltaRatio() / 60)
+    render()
+  }
+  $gsap.ticker.add(tick)
+
+  // type 'x': o Draggable aplica touch-action pan-y — rolar a página por cima
+  // da galeria continua funcionando no celular. Sem bounds: cilindro infinito.
+  galleryDraggable = $Draggable.create(proxy, {
     type: 'x',
-    bounds: { minX, maxX: 0 },
-    inertia: !$prefersReducedMotion?.(),
-    cursor: 'grab',
+    trigger: viewport,
+    inertia: !reduced,
     onPress() {
-      this.target.style.cursor = 'grabbing'
-      // `will-change` só durante o arrasto de fato, não permanente — reduz
-      // o número de camadas GPU coexistindo com o scroll-snap das cenas.
-      this.target.style.willChange = 'transform'
+      dragging = true
+      viewport.classList.replace('cursor-grab', 'cursor-grabbing')
     },
     onRelease() {
-      this.target.style.cursor = 'grab'
-      this.target.style.willChange = 'auto'
-      tiltXTo?.(0)
+      viewport.classList.replace('cursor-grabbing', 'cursor-grab')
+      // Sem inércia (ou soltou parado), o giro lento volta na hora.
+      if (!this.tween || !this.tween.isActive()) dragging = false
     },
-    onDrag() {
-      if (!tilt3d) return
-      tiltXTo?.($gsap.utils.clamp(-10, 10, this.deltaX * 0.6))
-    }
-  })
-  galleryDraggable = draggables as unknown as { kill: () => void }[]
+    onDrag: render,
+    onThrowUpdate: render,
+    // Terminou a inércia: devolve o controle pro giro lento.
+    onThrowComplete() { dragging = false }
+  }) as unknown as { kill: () => void }[]
 
-  if (!$prefersReducedMotion?.()) {
-    $gsap.from(galleryViewportEl.value, {
-      autoAlpha: 0,
-      y: 40,
-      duration: 0.8,
-      ease: 'easeOut',
+  let resizeTimer = 0
+  onResize = () => {
+    window.clearTimeout(resizeTimer)
+    resizeTimer = window.setTimeout(() => { layout() }, 150)
+  }
+  window.addEventListener('resize', onResize)
+
+  if (!reduced) {
+    // Entrada: a galeria surge e o cilindro chega girando rápido, desacelerando
+    // até o giro lento contínuo.
+    $gsap.timeline({
       scrollTrigger: {
         trigger: sectionEl.value,
         start: 'top 70%',
         toggleActions: 'play none none reverse'
       }
     })
+      .from(viewport, { autoAlpha: 0, duration: 0.8, ease: 'easeOut' }, 0)
+      .fromTo(spin, { speed: 40 }, { speed: 1, duration: 2, ease: 'expo.out', immediateRender: false }, 0)
   }
 })
 
 onBeforeUnmount(() => {
   galleryDraggable?.forEach(d => d.kill())
+  if (tick) $gsap.ticker.remove(tick)
+  if (onResize) window.removeEventListener('resize', onResize)
 })
 
 const COLORS = ['#f2b90f', '#f2f2f2', '#520000']
@@ -228,3 +275,29 @@ watch(isVisible, (visible) => {
   if (visible && !$prefersReducedMotion?.()) burstConfetti()
 })
 </script>
+
+<style scoped>
+/* Tamanho da célula vem da cena (setado no mount em px); os valores daqui
+   são só o primeiro paint no SSR, antes do JS medir. */
+.gallery-viewport {
+  --cell-h: 160px;
+  --cell-w: 128px;
+  --cell-gap: 8px;
+}
+
+.gallery-col {
+  gap: var(--cell-gap);
+  width: var(--cell-w);
+}
+
+.gallery-cell {
+  width: var(--cell-w);
+  height: var(--cell-h);
+}
+
+/* Foto + moldura (6px de cada lado) cabem na célula em qualquer proporção. */
+.gallery-img {
+  max-width: calc(var(--cell-w) - 12px);
+  max-height: calc(var(--cell-h) - 12px);
+}
+</style>
