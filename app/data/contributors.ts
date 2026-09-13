@@ -55,6 +55,23 @@ const rawContributors: Contributor[] = [
     audio: '/audio/mensagem-davi.mp3',
     message: daviSegments.map(s => s.text).join(' '),
     transcriptSegments: daviSegments
+  },
+  {
+    // Foto do show (arquivo compartilhado com o Licurci — os dois aparecem
+    // nela), WebP na proporção original 3:2, sem corte. Áudio ainda não
+    // chegou: quando chegar, salvar em public/audio/mensagem-joao-paulo.mp3,
+    // rodar scripts/transcribe.mjs e preencher audio/message/transcriptSegments
+    // igual aos de cima. Sem mensagem, a seção só não mostra legenda nem verso.
+    name: 'João Paulo',
+    photo: '/images/degrau/degrau-show-01.webp',
+    message: ''
+  },
+  {
+    // Mesma foto do show do João Paulo (os dois nela). Áudio pendente — mesmo
+    // processo: public/audio/mensagem-licurci.mp3 + scripts/transcribe.mjs.
+    name: 'Licurci MC Degrau',
+    photo: '/images/degrau/degrau-show-01.webp',
+    message: ''
   }
 ]
 
