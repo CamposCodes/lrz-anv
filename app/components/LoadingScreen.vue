@@ -164,7 +164,7 @@ onMounted(async () => {
   // antes do sinal real, mesmo em conexão rápida.
   const realReady = Promise.all([
     trackStep(waitFonts()),
-    ...contributors.map(c => trackStep(preloadImage(c.photo))),
+    ...contributors.filter(c => c.photo).map(c => trackStep(preloadImage(c.photo!))),
     trackStep(preloadImage('/images/lrz-mark.png')),
     trackStep(waitWindowLoad())
   ])

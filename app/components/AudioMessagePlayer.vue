@@ -12,7 +12,7 @@
         type="button"
         class="play-btn relative flex size-9 shrink-0 items-center justify-center border-0 bg-transparent p-0 text-foreground outline-offset-4 transition-transform duration-150 ease-out motion-reduce:transition-none active:scale-[0.94]"
         :class="{ 'is-playing': isPlaying }"
-        :aria-label="isPlaying ? 'Pausar áudio' : 'Tocar áudio'"
+        :aria-label="isPlaying ? `Pausar ${kind}` : `Tocar ${kind}`"
         @click="toggle"
       >
         <span class="relative flex size-8 items-center justify-center">
@@ -65,14 +65,17 @@
           :max="duration || 0"
           step="0.01"
           :value="currentTime"
-          aria-label="Posição do áudio"
+          :aria-label="`Posição do ${kind}`"
           @input="onSeekInput"
         >
       </div>
     </div>
 
+    <!-- Com `media` (ex.: o <video> do cartão central), o player controla esse
+         elemento em vez de criar o próprio <audio>. -->
     <audio
-      ref="audioRef"
+      v-if="!media"
+      ref="innerAudioRef"
       :src="src"
       preload="metadata"
       @play="onPlay"
@@ -87,7 +90,10 @@
 <script setup lang="ts">
 import { Play, Pause } from '@lucide/vue'
 
-const { src } = defineProps<{ src: string }>()
+// `src` também semeia o desenho da onda. `media` (opcional): elemento externo
+// que o player passa a controlar — play/pause, seek, progresso e legenda —
+// em vez do <audio> interno.
+const { src, media = null } = defineProps<{ src: string, media?: HTMLMediaElement | null }>()
 
 // Emite o tempo atual pra quem usa este player conseguir sincronizar algo
 // externo com a reprodução (ex.: legenda por trecho em ContributorSection.vue)
@@ -100,11 +106,39 @@ watch(currentTime, (t) => emit('timeupdate', t))
 
 const progress = computed(() => duration.value ? (currentTime.value / duration.value) * 100 : 0)
 
+const kind = computed(() => media?.tagName === 'VIDEO' ? 'vídeo' : 'áudio')
+
+// <audio> interno tem ref PRÓPRIA: se fosse direto no audioRef do composable,
+// ao trocar pra `media` o v-if desmontaria o <audio> e o Vue zeraria o
+// audioRef DEPOIS de ele já apontar pro vídeo — botão e onda paravam de agir.
+const innerAudioRef = ref<HTMLAudioElement | null>(null)
+watch([() => media, innerAudioRef], () => {
+  audioRef.value = media ?? innerAudioRef.value
+}, { immediate: true, flush: 'post' })
+
 // Áudio local/cacheado pode terminar de carregar metadata antes do Vue montar
 // o listener @loadedmetadata — sem isso, a duração fica travada em 0:00.
 onMounted(() => {
   if (audioRef.value && audioRef.value.readyState >= 1) onLoadedMetadata()
 })
+
+// Elemento externo: liga os mesmos eventos que o <audio> interno usa no
+// template e aponta o composable pra ele. Refaz se o elemento mudar.
+const MEDIA_EVENTS = [
+  ['play', onPlay],
+  ['pause', onPause],
+  ['ended', onEnded],
+  ['timeupdate', onTimeUpdate],
+  ['loadedmetadata', onLoadedMetadata]
+] as const
+
+watch(() => media, (el, _old, onCleanup) => {
+  if (!el) return
+  MEDIA_EVENTS.forEach(([name, handler]) => el.addEventListener(name, handler))
+  if (el.readyState >= 1) onLoadedMetadata()
+  if (!el.paused) onPlay()
+  onCleanup(() => MEDIA_EVENTS.forEach(([name, handler]) => el.removeEventListener(name, handler)))
+}, { immediate: true })
 
 function onSeekInput(e: Event) {
   seek(Number((e.target as HTMLInputElement).value))

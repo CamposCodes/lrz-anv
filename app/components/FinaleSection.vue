@@ -95,7 +95,7 @@ const DRAG_BOOST = 1.8
 // Achata TODAS as fotos de todo mundo num pool só (quem tem `photos` contribui
 // com cada uma; quem só tem `photo`, com uma).
 const photoPool = computed(() => props.contributors.flatMap(
-  c => (c.photos?.length ? c.photos : [c.photo]).map(photo => ({ photo, name: c.name }))
+  c => (c.photos?.length ? c.photos : c.photo ? [c.photo] : []).map(photo => ({ photo, name: c.name }))
 ))
 
 // Quantidade de colunas: o bastante pra cobrir o arco visível do cilindro sem

@@ -1,8 +1,8 @@
-// Só um áudio toca por vez: módulo guarda o <audio> ativo e pausa o anterior ao trocar.
-const activeAudio = ref<HTMLAudioElement | null>(null)
+// Só uma mensagem toca por vez: módulo guarda o <audio>/<video> ativo e pausa o anterior ao trocar.
+const activeAudio = ref<HTMLMediaElement | null>(null)
 
 export const useAudioPlayer = () => {
-  const audioRef = ref<HTMLAudioElement | null>(null)
+  const audioRef = ref<HTMLMediaElement | null>(null)
   const isPlaying = ref(false)
   const currentTime = ref(0)
   const duration = ref(0)

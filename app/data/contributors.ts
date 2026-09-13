@@ -3,6 +3,9 @@ import paiSegments from './transcripts/mensagem-pai.json'
 import vitorSegments from './transcripts/mensagem-vitor.json'
 import daviSegments from './transcripts/mensagem-davi.json'
 import joaoRicardoSegments from './transcripts/mensagem-joao-ricardo.json'
+import arthurDexisSegments from './transcripts/mensagem-arthur-dexis.json'
+import bruninhoSegments from './transcripts/mensagem-bruninho.json'
+import voMaluSegments from './transcripts/mensagem-vo-malu.json'
 
 // Versão das fotos na URL. As fotos foram reexportadas dos originais (proporção
 // real, sem fundo borrado) mantendo os MESMOS nomes de arquivo — sem isso,
@@ -80,11 +83,49 @@ const rawContributors: Contributor[] = [
     audio: '/audio/mensagem-joao-ricardo.mp3',
     message: joaoRicardoSegments.map(s => s.text).join(' '),
     transcriptSegments: joaoRicardoSegments
+  },
+  {
+    // Mensagem em VÍDEO (WhatsApp, selfie 9:16, 2min22s, 17MB). Reencodado com
+    // ffmpeg: 30fps constante, redução leve de ruído (hqdn3d), áudio mono
+    // normalizado (-16.5 LUFS, passa-alta 70Hz), MP4 com faststart. Duas
+    // versões: AV1 (7.6MB, navegadores modernos) e H.264 High (14.5MB,
+    // reserva universal) — mesma qualidade (SSIM ~0.985 contra o original).
+    // Capa = quadro de 74s em WebP. Transcrição: WHISPER_MODEL=medium
+    // node scripts/transcribe.mjs public/video/mensagem-arthur-dexis.mp4.
+    name: 'Arthur Dexis',
+    photo: '/images/arthur-dexis/arthur-dexis-01.webp',
+    video: {
+      h264: '/video/mensagem-arthur-dexis.mp4',
+      av1: '/video/mensagem-arthur-dexis.av1.mp4',
+      width: 576,
+      height: 1024
+    },
+    message: arthurDexisSegments.map(s => s.text).join(' '),
+    transcriptSegments: arthurDexisSegments
+  },
+  {
+    // Sem foto por enquanto (cartão de papel em branco com o nome). Áudio veio
+    // como WAV editado; convertido pro padrão dos outros (MP3 mono 44.1kHz
+    // 96kbps, loudnorm -16.5 LUFS). Transcrição: Whisper medium.
+    // Quando a foto chegar: WebP em public/images/bruninho/ e preencher `photo`.
+    name: 'Bruninho, Sobrinho',
+    audio: '/audio/mensagem-bruninho.mp3',
+    message: bruninhoSegments.map(s => s.text).join(' '),
+    transcriptSegments: bruninhoSegments
+  },
+  {
+    // Sem foto por enquanto. WAV original saturado (pico 0 dBFS) — a
+    // normalização trouxe o pico pra -0.6 dB. Mesmo formato e processo do
+    // Bruninho. Quando a foto chegar: public/images/vo-malu/ e preencher `photo`.
+    name: 'Vó Malu',
+    audio: '/audio/mensagem-vo-malu.mp3',
+    message: voMaluSegments.map(s => s.text).join(' '),
+    transcriptSegments: voMaluSegments
   }
 ]
 
 export const contributors: Contributor[] = rawContributors.map(c => ({
   ...c,
-  photo: versioned(c.photo),
+  photo: c.photo && versioned(c.photo),
   photos: c.photos?.map(versioned)
 }))

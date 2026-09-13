@@ -46,7 +46,7 @@
         :ref="(el) => setStackRef('prev', i, el)"
         class="print pointer-events-none absolute left-1/2 w-max top-[38%] z-0 sm:top-1/2 opacity-0"
       >
-        <img :src="photo?.photo" :alt="photo?.name" loading="lazy" draggable="false" class="max-h-[40dvh] max-w-[min(48vw,28rem)] sm:max-h-[64dvh] sm:max-w-[min(62vw,28rem)]">
+        <img :src="photo?.photo || undefined" :alt="photo?.name" loading="lazy" draggable="false" class="max-h-[40dvh] max-w-[min(48vw,28rem)] sm:max-h-[64dvh] sm:max-w-[min(62vw,28rem)]">
       </div>
 
       <div
@@ -56,7 +56,7 @@
         :ref="(el) => setStackRef('next', i, el)"
         class="print pointer-events-none absolute left-1/2 w-max top-[38%] z-0 sm:top-1/2 opacity-0"
       >
-        <img :src="photo?.photo" :alt="photo?.name" loading="lazy" draggable="false" class="max-h-[40dvh] max-w-[min(48vw,28rem)] sm:max-h-[64dvh] sm:max-w-[min(62vw,28rem)]">
+        <img :src="photo?.photo || undefined" :alt="photo?.name" loading="lazy" draggable="false" class="max-h-[40dvh] max-w-[min(48vw,28rem)] sm:max-h-[64dvh] sm:max-w-[min(62vw,28rem)]">
       </div>
 
       <!-- Viajantes: mesma caixa das pilhas e do cartão central, ficam
@@ -91,10 +91,10 @@
       <div
         ref="photoStageEl"
         class="pointer-events-auto absolute left-1/2 top-[38%] z-20 w-max -translate-x-1/2 -translate-y-1/2 touch-pan-y select-none outline-offset-8 sm:top-1/2"
-        :class="isDragging ? 'cursor-grabbing' : hasCarousel ? 'cursor-grab' : 'cursor-zoom-in'"
-        role="button"
-        tabindex="0"
-        :aria-label="`Ampliar foto de ${contributor.name}`"
+        :class="isDragging ? 'cursor-grabbing' : hasCarousel ? 'cursor-grab' : canZoom ? 'cursor-zoom-in' : 'cursor-default'"
+        :role="canZoom ? 'button' : undefined"
+        :tabindex="canZoom ? 0 : undefined"
+        :aria-label="canZoom ? `Ampliar foto de ${contributor.name}` : undefined"
         @pointerdown="onPointerDown"
         @pointermove="onPointerMove"
         @pointerup="onPointerUp"
@@ -119,14 +119,45 @@
                  aspect fixo no wrapper, a margem espremeria a foto e o
                  object-cover cortaria. -->
             <div class="print print--lifted flip-face">
-              <img
+              <!-- Mensagem em vídeo: `photo` vira a capa (poster). preload
+                   metadata baixa só o cabeçalho (MP4 com faststart) — o vídeo
+                   em si só é baixado no play. AV1 primeiro (bem menor), H.264
+                   de reserva. Sem controles nativos: quem toca/pausa/avança é
+                   o player da onda na legenda. -->
+              <video
+                v-if="contributor.video"
                 ref="photoImgEl"
-                :src="current?.photo"
-                :alt="current?.name"
+                class="print-video"
+                :style="{ '--video-ratio': contributor.video.height / contributor.video.width }"
+                :poster="current?.photo"
+                :aria-label="`Mensagem em vídeo de ${contributor.name}`"
+                playsinline
+                preload="metadata"
+              >
+                <source v-if="contributor.video.av1" :src="contributor.video.av1" type="video/mp4; codecs=av01.0.05M.08">
+                <source :src="contributor.video.h264" type="video/mp4">
+              </video>
+              <img
+                v-else-if="current?.photo"
+                ref="photoImgEl"
+                :src="current.photo"
+                :alt="current.name"
                 loading="lazy"
                 draggable="false"
                 class="max-h-[40dvh] max-w-[min(48vw,28rem)] sm:max-h-[64dvh] sm:max-w-[min(62vw,28rem)]"
               >
+              <!-- Foto ainda não chegou: papel fotográfico em branco (mesma
+                   moldura) com o nome — a seção funciona inteira sem ela. -->
+              <div
+                v-else
+                ref="photoImgEl"
+                class="print-empty flex items-center justify-center p-6 text-center font-script text-5xl leading-none sm:text-7xl"
+                style="color: var(--primary)"
+                role="img"
+                :aria-label="`${contributor.name} (foto em breve)`"
+              >
+                {{ contributor.name.split(',')[0] }}
+              </div>
             </div>
             <!-- Verso: mesma caixa, pré-girado 180° (estático) — só aparece
                  quando o pai (photoCardEl) gira e o backface-visibility do
@@ -231,7 +262,12 @@
           {{ contributor.name }}
         </h3>
 
-        <AudioMessagePlayer v-if="contributor.audio" :src="contributor.audio" @timeupdate="onAudioTime" />
+        <AudioMessagePlayer
+          v-if="contributor.audio || contributor.video"
+          :src="contributor.audio ?? contributor.video?.h264 ?? ''"
+          :media="videoEl"
+          @timeupdate="onAudioTime"
+        />
 
         <!-- Quando há áudio, o texto É a transcrição do que a pessoa fala nele
              (mesmo campo `contributor.message`, sem duplicar dado). Se o
@@ -258,7 +294,7 @@
             v-if="displayedMessage"
             :key="displayedMessage"
             class="relative break-words font-instrument-serif text-3xl leading-[1.15] tracking-tight text-white sm:text-4xl"
-            :class="{ 'mt-5 min-h-[4.6em] sm:mt-6': contributor.audio }"
+            :class="{ 'mt-5 min-h-[4.6em] sm:mt-6': contributor.audio || contributor.video }"
           >
             {{ displayedMessage }}
           </p>
@@ -276,10 +312,45 @@
           class="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4 sm:p-10"
           role="dialog"
           aria-modal="true"
-          :aria-label="`Foto de ${contributor.name}`"
+          :aria-label="contributor.video ? `Vídeo de ${contributor.name}` : `Foto de ${contributor.name}`"
           @click.self="closeLightbox"
         >
-          <div class="lightbox-photo print print--lifted [--frame:clamp(10px,1.6vmin,18px)]">
+          <div
+            v-if="contributor.video"
+            class="lightbox-photo flex flex-col items-center gap-4"
+            @click.self="closeLightbox"
+          >
+            <div class="print print--lifted [--frame:clamp(10px,1.6vmin,18px)]">
+              <!-- Vídeo grande SEM controles nativos: quem toca/pausa/avança é o
+                   mesmo player de onda da seção, logo abaixo, com a legenda. -->
+              <video
+                ref="lightboxVideoEl"
+                class="lightbox-video"
+                :style="{ '--video-ratio': contributor.video.height / contributor.video.width }"
+                :poster="current?.photo"
+                playsinline
+                preload="metadata"
+              >
+                <source v-if="contributor.video.av1" :src="contributor.video.av1" type="video/mp4; codecs=av01.0.05M.08">
+                <source :src="contributor.video.h264" type="video/mp4">
+              </video>
+            </div>
+            <div class="w-full max-w-md">
+              <AudioMessagePlayer
+                :src="contributor.video.h264"
+                :media="lightboxVideoEl"
+                @timeupdate="onAudioTime"
+              />
+            </div>
+            <p
+              v-if="displayedMessage"
+              class="max-w-xl text-center font-instrument-serif text-xl leading-snug text-white sm:text-2xl"
+              aria-live="off"
+            >
+              {{ displayedMessage }}
+            </p>
+          </div>
+          <div v-else class="lightbox-photo print print--lifted [--frame:clamp(10px,1.6vmin,18px)]">
             <img
               :src="current?.photo"
               :alt="current?.name"
@@ -291,7 +362,7 @@
             ref="lightboxCloseEl"
             type="button"
             class="absolute right-3 top-3 flex size-12 items-center justify-center rounded-full bg-white/10 text-white transition-colors duration-150 hover:bg-white/20 sm:right-6 sm:top-6"
-            aria-label="Fechar foto"
+            :aria-label="contributor.video ? 'Fechar vídeo' : 'Fechar foto'"
             @click="closeLightbox"
           >
             <X class="size-7" />
@@ -310,9 +381,11 @@ import { carouselWindow, step, wrapIndex } from '@/utils/carousel'
 const props = defineProps<{ contributor: Contributor, index: number }>()
 
 // Entrada alterna entre as seções pra variar a dinâmica: 1ª letras, 2ª cópias
-// passando, 3ª confete, e repete.
+// passando, 3ª confete, e repete. Sem foto não há cópias pra passar: quem cairia
+// em 'reel' ganha confete no lugar.
 const ENTRANCES = ['letters', 'reel', 'confetti'] as const
-const entrance = ENTRANCES[props.index % ENTRANCES.length]!
+const rotated = ENTRANCES[props.index % ENTRANCES.length]!
+const entrance = rotated === 'reel' && !props.contributor.photo ? 'confetti' : rotated
 
 // Pool da pilha: só as fotos DESTE contribuidor — cada seção mostra somente
 // as próprias fotos, nunca as de outra pessoa (antes o pool misturava todo
@@ -323,7 +396,9 @@ const entrance = ENTRANCES[props.index % ENTRANCES.length]!
 // mensagem/áudio/transcrição continuam vindo sempre de `props.contributor`
 // no template (nunca de `current`), então a legenda nunca muda ao ciclar.
 const photoPool = computed(() => {
-  const photos = props.contributor.photos?.length ? props.contributor.photos : [props.contributor.photo]
+  // Sem foto nenhuma ainda: pool de 1 entrada vazia (sem carrossel; o cartão
+  // central vira papel em branco com o nome, ver template).
+  const photos = props.contributor.photos?.length ? props.contributor.photos : [props.contributor.photo ?? '']
   return photos.map(photo => ({ ...props.contributor, photo }))
 })
 
@@ -334,22 +409,47 @@ const hasCarousel = computed(() => photoPool.value.length > 1)
 // Foto em tela cheia (toque sem arrastar, Enter ou Espaço na foto central).
 const lightboxOpen = ref(false)
 const lightboxCloseEl = ref<HTMLButtonElement | null>(null)
+const lightboxVideoEl = ref<HTMLVideoElement | null>(null)
 
 function onLightboxKey(e: KeyboardEvent) {
   if (e.key === 'Escape') closeLightbox()
 }
 
+// Sem foto nem vídeo não há o que ampliar.
+const canZoom = computed(() => !!(props.contributor.video || props.contributor.photo))
+
 function openLightbox() {
-  if (lightboxOpen.value || isFlipped.value) return
+  if (lightboxOpen.value || isFlipped.value || !canZoom.value) return
+  // Vídeo: a reprodução passa do cartão pro vídeo grande, do mesmo ponto —
+  // se estava tocando, continua tocando (o toque do usuário libera o play).
+  const card = videoEl.value
+  const resumeAt = card?.currentTime ?? 0
+  const wasPlaying = !!card && !card.paused
+  card?.pause()
   lightboxOpen.value = true
   // Trava a rolagem da página (scroll-snap) enquanto a foto está aberta.
   document.documentElement.style.overflow = 'hidden'
   window.addEventListener('keydown', onLightboxKey)
-  nextTick(() => lightboxCloseEl.value?.focus())
+  nextTick(() => {
+    lightboxCloseEl.value?.focus()
+    const big = lightboxVideoEl.value
+    if (!big) return
+    big.currentTime = resumeAt
+    if (wasPlaying) big.play().catch(() => {})
+  })
 }
 
 function closeLightbox() {
   if (!lightboxOpen.value) return
+  // E volta: o cartão retoma do ponto em que o vídeo grande parou.
+  const big = lightboxVideoEl.value
+  const card = videoEl.value
+  if (big && card) {
+    const wasPlaying = !big.paused
+    big.pause()
+    card.currentTime = big.currentTime
+    if (wasPlaying) card.play().catch(() => {})
+  }
   lightboxOpen.value = false
   document.documentElement.style.overflow = ''
   window.removeEventListener('keydown', onLightboxKey)
@@ -402,6 +502,8 @@ const rainEl = ref<HTMLElement | null>(null)
 const photoStageEl = ref<HTMLElement | null>(null)
 const photoCardEl = ref<HTMLElement | null>(null)
 const photoImgEl = ref<HTMLElement | null>(null)
+// Mensagem em vídeo: o mesmo ref do cartão central é o <video> (ver template).
+const videoEl = computed(() => props.contributor.video ? photoImgEl.value as HTMLVideoElement | null : null)
 const safelightEl = ref<HTMLElement | null>(null)
 const travelInEl = ref<HTMLElement | null>(null)
 const travelInImgEl = ref<HTMLImageElement | null>(null)
@@ -776,7 +878,7 @@ let flipTween: { kill: () => void } | null = null
 // Continua visível depois de virar a foto (não some mais) — só o TEXTO
 // troca (flipHintLabel), pra sempre dar a ação certa: "veja o verso" antes
 // de virar, "veja a foto" depois, o ícone servindo o tempo todo de volta.
-const showFlipHint = computed(() => !props.contributor.audio || audioTime.value > 0)
+const showFlipHint = computed(() => !(props.contributor.audio || props.contributor.video) || audioTime.value > 0)
 const flipHintLabel = computed(() => isFlipped.value ? 'veja a foto' : 'veja o verso da foto')
 
 function toggleFlip() {
@@ -1091,6 +1193,56 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+/* Mensagem em vídeo no cartão: mesma caixa máxima das fotos (max-h/max-w do
+   <img>), mas com a altura calculada pela proporção real (--video-ratio =
+   altura/largura) — o cartão já nasce no tamanho certo antes do vídeo
+   carregar, sem pular nem distorcer. object-fit cover com a proporção exata
+   não corta nada; só garante que a capa preencha a caixa. */
+/* Papel em branco enquanto a foto não chega: caixa 4:5 com a área da
+   "emulsão" escura, mesmo tamanho máximo de uma foto em pé no cartão. */
+.print-empty {
+  position: relative;
+  height: min(40dvh, calc(min(48vw, 28rem) * 1.25));
+  aspect-ratio: 4 / 5;
+  background: linear-gradient(155deg, #3a2a22 0%, #1f1612 60%, #120c0a 100%);
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.9);
+}
+
+@media (min-width: 640px) {
+  .print-empty {
+    height: min(64dvh, calc(min(62vw, 28rem) * 1.25));
+  }
+}
+
+.print-video {
+  display: block;
+  position: relative;
+  height: min(40dvh, calc(min(48vw, 28rem) * var(--video-ratio)));
+  aspect-ratio: calc(1 / var(--video-ratio));
+  object-fit: cover;
+  background: #000;
+}
+
+@media (min-width: 640px) {
+  .print-video {
+    height: min(64dvh, calc(min(62vw, 28rem) * var(--video-ratio)));
+  }
+}
+
+/* Vídeo em tela cheia: deixa espaço embaixo pra legenda. */
+.lightbox-video {
+  display: block;
+  height: min(68dvh, calc((100vw - 4rem) * var(--video-ratio)));
+  aspect-ratio: calc(1 / var(--video-ratio));
+  background: #000;
+}
+
+@media (min-width: 640px) {
+  .lightbox-video {
+    height: min(74dvh, calc((100vw - 10rem) * var(--video-ratio)));
+  }
+}
+
 /* Foto em tela cheia: fundo aparece em fade e a cópia cresce de leve até o
    tamanho final; fecha mais rápido do que abre. Movimento reduzido já é
    neutralizado pelo tailwind.css global. */
