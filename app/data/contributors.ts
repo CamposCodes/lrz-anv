@@ -17,8 +17,17 @@ export const contributors: Contributor[] = [
     // scripts/optimize-pai-photos.mjs — alimentam tanto a pilha desta seção
     // quanto o mural arrastável do FinaleSection, com variedade de verdade em
     // vez de repetir uma só foto. pai-19 primeiro (mesma foto de `photo`
-    // acima) pra a pilha começar exatamente na capa.
-    photos: ['/images/pai/pai-19.webp', ...Array.from({ length: 18 }, (_, i) => `/images/pai/pai-${String(i + 1).padStart(2, '0')}.webp`)],
+    // acima) pra a pilha começar exatamente na capa. Lista explícita (não
+    // mais gerada por range 01..18): pai-17 era duas fotos física coladas
+    // numa imagem só (bug reportado) — scripts/fix-pai-photos.mjs dividiu em
+    // pai-17a/pai-17b, quebrando a sequência numérica limpa.
+    photos: [
+      '/images/pai/pai-19.webp',
+      ...Array.from({ length: 16 }, (_, i) => `/images/pai/pai-${String(i + 1).padStart(2, '0')}.webp`),
+      '/images/pai/pai-17a.webp',
+      '/images/pai/pai-17b.webp',
+      '/images/pai/pai-18.webp'
+    ],
     audio: '/audio/mensagem-pai.mp3',
     message: paiSegments.map(s => s.text).join(' '),
     transcriptSegments: paiSegments
