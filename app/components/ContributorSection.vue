@@ -41,6 +41,7 @@
            do caminho (ver commitStackTransition). -->
       <div
         v-for="(photo, i) in prevDeque"
+        v-show="hasCarousel"
         :key="`prev-stack-${i}`"
         :ref="(el) => setStackRef('prev', i, el)"
         class="print pointer-events-none absolute left-1/2 w-max top-[38%] z-0 sm:top-1/2 opacity-0"
@@ -50,6 +51,7 @@
 
       <div
         v-for="(photo, i) in nextDeque"
+        v-show="hasCarousel"
         :key="`next-stack-${i}`"
         :ref="(el) => setStackRef('next', i, el)"
         class="print pointer-events-none absolute left-1/2 w-max top-[38%] z-0 sm:top-1/2 opacity-0"
@@ -84,14 +86,21 @@
            mesmo depois dele no DOM, então o clique do botão/seek do
            AudioMessagePlayer (visualmente abaixo) não é roubado. O drag continua
            igual: pointer handler no próprio photoStageEl. -->
+      <!-- Toque/clique sem arrastar (ver onPointerUp) ou Enter/Espaço abre a foto
+           em tela cheia. -->
       <div
         ref="photoStageEl"
-        class="pointer-events-auto absolute left-1/2 top-[38%] z-20 w-max -translate-x-1/2 -translate-y-1/2 touch-pan-y select-none sm:top-1/2"
-        :class="isDragging ? 'cursor-grabbing' : 'cursor-grab'"
+        class="pointer-events-auto absolute left-1/2 top-[38%] z-20 w-max -translate-x-1/2 -translate-y-1/2 touch-pan-y select-none outline-offset-8 sm:top-1/2"
+        :class="isDragging ? 'cursor-grabbing' : hasCarousel ? 'cursor-grab' : 'cursor-zoom-in'"
+        role="button"
+        tabindex="0"
+        :aria-label="`Ampliar foto de ${contributor.name}`"
         @pointerdown="onPointerDown"
         @pointermove="onPointerMove"
         @pointerup="onPointerUp"
         @pointercancel="onPointerUp"
+        @keydown.enter.prevent="openLightbox"
+        @keydown.space.prevent="openLightbox"
       >
         <div ref="photoCardEl" class="flip-3d">
           <!-- `overflow-hidden` NUNCA pode dividir elemento com `preserve-3d`
@@ -159,7 +168,10 @@
            então o bloco já nasce visível. Some de novo assim que a foto já
            foi virada uma vez. gap-1.5 (era gap-2) pra ler como uma etiqueta
            única grudada no ícone, não dois elementos soltos lado a lado. -->
+      <!-- Sem mensagem (contribuidor cujo áudio ainda não chegou) não há verso
+           pra ler — o botão de virar nem existe. -->
       <div
+        v-if="contributor.message"
         class="absolute left-1 top-6 z-40 flex items-center transition-opacity duration-500 motion-reduce:transition-none"
         :class="showFlipHint ? 'opacity-100' : 'pointer-events-none opacity-0'"
       >
@@ -243,6 +255,7 @@
              exatamente o "aumentando e diminuindo" reportado. -->
         <Transition name="caption-swap" mode="out-in">
           <p
+            v-if="displayedMessage"
             :key="displayedMessage"
             class="relative break-words font-instrument-serif text-3xl leading-[1.15] tracking-tight text-white sm:text-4xl"
             :class="{ 'mt-5 min-h-[4.6em] sm:mt-6': contributor.audio }"
@@ -252,11 +265,45 @@
         </Transition>
       </div>
     </div>
+
+    <!-- Foto em tela cheia: a cópia central maior, na moldura e proporção real
+         (sem corte), com X pra fechar. Teleport pro body: a seção tem
+         `contain: paint`/isolation (tailwind.css), que recortaria um fixed. -->
+    <Teleport to="body">
+      <Transition name="lightbox">
+        <div
+          v-if="lightboxOpen"
+          class="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4 sm:p-10"
+          role="dialog"
+          aria-modal="true"
+          :aria-label="`Foto de ${contributor.name}`"
+          @click.self="closeLightbox"
+        >
+          <div class="lightbox-photo print print--lifted [--frame:clamp(10px,1.6vmin,18px)]">
+            <img
+              :src="current?.photo"
+              :alt="current?.name"
+              draggable="false"
+              class="max-h-[80dvh] max-w-[calc(100vw-4rem)] sm:max-h-[84dvh] sm:max-w-[calc(100vw-10rem)]"
+            >
+          </div>
+          <button
+            ref="lightboxCloseEl"
+            type="button"
+            class="absolute right-3 top-3 flex size-12 items-center justify-center rounded-full bg-white/10 text-white transition-colors duration-150 hover:bg-white/20 sm:right-6 sm:top-6"
+            aria-label="Fechar foto"
+            @click="closeLightbox"
+          >
+            <X class="size-7" />
+          </button>
+        </div>
+      </Transition>
+    </Teleport>
   </section>
 </template>
 
 <script setup lang="ts">
-import { RotateCcw } from '@lucide/vue'
+import { RotateCcw, X } from '@lucide/vue'
 import type { Contributor } from '@/types'
 import { carouselWindow, step, wrapIndex } from '@/utils/carousel'
 
@@ -279,6 +326,36 @@ const photoPool = computed(() => {
   const photos = props.contributor.photos?.length ? props.contributor.photos : [props.contributor.photo]
   return photos.map(photo => ({ ...props.contributor, photo }))
 })
+
+// Com uma foto só não há carrossel: os bolos laterais somem (v-show, o DOM
+// continua pra entrada/refs não quebrarem) e arrastar só devolve a foto ao centro.
+const hasCarousel = computed(() => photoPool.value.length > 1)
+
+// Foto em tela cheia (toque sem arrastar, Enter ou Espaço na foto central).
+const lightboxOpen = ref(false)
+const lightboxCloseEl = ref<HTMLButtonElement | null>(null)
+
+function onLightboxKey(e: KeyboardEvent) {
+  if (e.key === 'Escape') closeLightbox()
+}
+
+function openLightbox() {
+  if (lightboxOpen.value || isFlipped.value) return
+  lightboxOpen.value = true
+  // Trava a rolagem da página (scroll-snap) enquanto a foto está aberta.
+  document.documentElement.style.overflow = 'hidden'
+  window.addEventListener('keydown', onLightboxKey)
+  nextTick(() => lightboxCloseEl.value?.focus())
+}
+
+function closeLightbox() {
+  if (!lightboxOpen.value) return
+  lightboxOpen.value = false
+  document.documentElement.style.overflow = ''
+  window.removeEventListener('keydown', onLightboxKey)
+  // Foco volta pra foto que abriu o visualizador.
+  photoStageEl.value?.focus()
+}
 
 // Legenda sincronizada: já nasce mostrando o trecho correspondente a
 // audioTime=0 (o primeiro segmento), não a mensagem inteira — antes era
@@ -961,7 +1038,11 @@ function commitStackTransition(destSide: 'prev' | 'next', duration: number, velo
   activeTween = tl
 }
 
-function onPointerUp() {
+// Toque = soltou quase no mesmo lugar e rápido: abre a foto em tela cheia.
+const TAP_DISTANCE = 8
+const TAP_DURATION = 350
+
+function onPointerUp(e?: PointerEvent) {
   if (!isDragging.value || !photoCardEl.value) return
   isDragging.value = false
   // Soltou: o cartão para de seguir o ponteiro. Num arremesso rápido os
@@ -975,8 +1056,12 @@ function onPointerUp() {
   const distance = Math.hypot(dragDx, dragDy)
   const velocity = distance / elapsed
   const wantsNext = dragDx < 0
-  const committed = distance > THROW_DISTANCE || velocity > THROW_VELOCITY
+  // Sem carrossel (uma foto só) nunca há troca — o gesto só volta pro centro.
+  const committed = hasCarousel.value && (distance > THROW_DISTANCE || velocity > THROW_VELOCITY)
+  const isTap = e?.type === 'pointerup' && distance < TAP_DISTANCE && elapsed < TAP_DURATION
   killPeekHover()
+
+  if (isTap) openLightbox()
 
   if (!committed) {
     // Folga: sem força/distância suficiente, a cópia desliza de volta pro
@@ -1001,10 +1086,38 @@ onBeforeUnmount(() => {
   activeTween?.kill()
   flipTween?.kill()
   ctx?.revert()
+  closeLightbox()
 })
 </script>
 
 <style scoped>
+/* Foto em tela cheia: fundo aparece em fade e a cópia cresce de leve até o
+   tamanho final; fecha mais rápido do que abre. Movimento reduzido já é
+   neutralizado pelo tailwind.css global. */
+.lightbox-enter-active,
+.lightbox-leave-active {
+  transition: opacity 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.lightbox-leave-active {
+  transition-duration: 0.18s;
+}
+
+.lightbox-enter-from,
+.lightbox-leave-to {
+  opacity: 0;
+}
+
+.lightbox-enter-active .lightbox-photo,
+.lightbox-leave-active .lightbox-photo {
+  transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.lightbox-enter-from .lightbox-photo,
+.lightbox-leave-to .lightbox-photo {
+  transform: scale(0.94);
+}
+
 /* Crossfade simples (CSS, não GSAP — troca de texto por trecho não precisa da
    timeline de scroll/drag do resto do componente) entre um trecho da legenda
    e o próximo. prefers-reduced-motion já neutraliza via tailwind.css global. */
