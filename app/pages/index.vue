@@ -2,7 +2,7 @@
   <main>
     <CoverSection />
 
-    <ContributorSection v-for="c in contributors" :key="c.name" :contributor="c" />
+    <ContributorSection v-for="(c, i) in contributors" :key="c.name" :contributor="c" :index="i" />
 
     <FinaleSection :contributors="contributors" />
   </main>

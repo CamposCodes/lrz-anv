@@ -5,27 +5,32 @@
            central. Acende piscando na entrada (lâmpada ligando) e fica acesa. -->
       <div ref="safelightEl" class="safelight pointer-events-none absolute inset-0 opacity-0" />
 
-      <!-- Chuva de letras "recorte de revista" caindo antes das fotos assentarem —
-           eco do Cover se dispersando. Cada letra é `absolute` e ganha x/y própria
-           via GSAP (onMounted), não flex/gap — é isso que espalha elas pela largura
-           em vez de uma fila única. overflow-hidden no stageEl já esconde a queda
-           fora da tela (entra por cima, sai por baixo), sem precisar de opacidade. -->
-      <div ref="tickerEl" class="pointer-events-none absolute inset-0 font-magazine-letter text-7xl">
-        <span v-for="(ch, i) in tickerLetters" :key="i" class="ticker-letter absolute left-0 top-0 inline-block" :style="{ color: TICKER_COLORS[i % TICKER_COLORS.length] }">{{ ch }}</span>
+      <!-- Entrada alterna por seção (ENTRANCES): chuva de letras "recorte de
+           revista", cópias passando ou confete caindo. Letras e confete são
+           peças `absolute` com x/y própria via GSAP (setupScene), não flex/gap —
+           é isso que espalha pela largura. overflow-hidden no stageEl já esconde
+           a queda fora da tela (entra por cima, sai por baixo). -->
+      <div v-if="entrance === 'letters'" ref="rainEl" class="pointer-events-none absolute inset-0 font-magazine-letter text-7xl">
+        <span v-for="(ch, i) in tickerLetters" :key="i" class="rain-piece absolute left-0 top-0 inline-block" :style="{ color: TICKER_COLORS[i % TICKER_COLORS.length] }">{{ ch }}</span>
+      </div>
+      <div v-else-if="entrance === 'confetti'" ref="rainEl" class="pointer-events-none absolute inset-0">
+        <span v-for="i in CONFETTI_COUNT" :key="i" class="rain-piece absolute left-0 top-0 block h-3 w-2 rounded-[1px]" :style="{ backgroundColor: TICKER_COLORS[i % TICKER_COLORS.length] }" />
       </div>
 
       <!-- Cópias da entrada: fotos do pool atravessando a tela rápido antes das
            reais formarem o carrossel (ver setupScene). Só enfeite — aria-hidden,
            alt vazio. Sem loading lazy: nascem fora da tela e entrariam como
            moldura sem foto. -->
-      <div
-        v-for="(photo, k) in reelPhotos"
-        :key="`reel-${k}`"
-        class="reel-print print pointer-events-none absolute left-1/2 w-max top-[38%] z-0 sm:top-1/2 opacity-0"
-        aria-hidden="true"
-      >
-        <img :src="photo.photo" alt="" draggable="false" decoding="async" class="max-h-[40dvh] max-w-[min(48vw,28rem)] sm:max-h-[64dvh] sm:max-w-[min(62vw,28rem)]">
-      </div>
+      <template v-if="entrance === 'reel'">
+        <div
+          v-for="(photo, k) in reelPhotos"
+          :key="`reel-${k}`"
+          class="reel-print print pointer-events-none absolute left-1/2 w-max top-[38%] z-0 sm:top-1/2 opacity-0"
+          aria-hidden="true"
+        >
+          <img :src="photo.photo" alt="" draggable="false" decoding="async" class="max-h-[40dvh] max-w-[min(48vw,28rem)] sm:max-h-[64dvh] sm:max-w-[min(62vw,28rem)]">
+        </div>
+      </template>
 
       <!-- Pilhas físicas nos cantos — cópias já reveladas secando, jogadas umas
            sobre as outras. Cada camada é a MESMA caixa (mesmo tamanho/moldura do
@@ -255,7 +260,12 @@ import { RotateCcw } from '@lucide/vue'
 import type { Contributor } from '@/types'
 import { carouselWindow, step, wrapIndex } from '@/utils/carousel'
 
-const props = defineProps<{ contributor: Contributor }>()
+const props = defineProps<{ contributor: Contributor, index: number }>()
+
+// Entrada alterna entre as seções pra variar a dinâmica: 1ª letras, 2ª cópias
+// passando, 3ª confete, e repete.
+const ENTRANCES = ['letters', 'reel', 'confetti'] as const
+const entrance = ENTRANCES[props.index % ENTRANCES.length]!
 
 // Pool da pilha: só as fotos DESTE contribuidor — cada seção mostra somente
 // as próprias fotos, nunca as de outra pessoa (antes o pool misturava todo
@@ -311,7 +321,7 @@ const displayedMessage = computed(() => {
 
 const sectionEl = ref<HTMLElement | null>(null)
 const stageEl = ref<HTMLElement | null>(null)
-const tickerEl = ref<HTMLElement | null>(null)
+const rainEl = ref<HTMLElement | null>(null)
 const photoStageEl = ref<HTMLElement | null>(null)
 const photoCardEl = ref<HTMLElement | null>(null)
 const photoImgEl = ref<HTMLElement | null>(null)
@@ -329,6 +339,7 @@ const captionEl = ref<HTMLElement | null>(null)
 const TICKER_POOL = Array.from('FELIZANIVERSARIOLORENZO')
 const TICKER_COLORS = ['#f2b90f', '#e63946', '#2a9d8f', '#f2f2f2', '#9b5de5', '#e9724c']
 const TICKER_LENGTH = 48
+const CONFETTI_COUNT = 70
 
 // Placeholder determinístico no SSR (nunca Math.random aqui — quebraria o
 // hydration); sorteia de verdade só depois de montado, quando a fila ainda
@@ -457,9 +468,10 @@ const PASS_DURATION = 0.9 // tempo de cada cópia atravessar a tela inteira
 const PASS_STAGGER = 0.08 // intervalo entre uma cópia e a próxima
 const FORM_DURATION = 0.9 // tempo das reais da borda direita até a pose
 const FORM_STAGGER = 0.06
+const RAIN_FORM_AT = 0.55 // início da formação nas entradas sem passagem (letras/confete)
 
 function setupScene() {
-  if (!sectionEl.value || !tickerEl.value || !photoCardEl.value || !photoImgEl.value || !photoStageEl.value
+  if (!sectionEl.value || !photoCardEl.value || !photoImgEl.value || !photoStageEl.value
     || !safelightEl.value || !travelInEl.value || !travelOutEl.value || !captionEl.value
     || prevStackEls.some(el => !el) || nextStackEls.some(el => !el)) return
 
@@ -496,7 +508,7 @@ function setupScene() {
 
   // Movimento reduzido: pula direto pro estado final, sem entrada animada.
   if ($prefersReducedMotion?.()) {
-    $gsap.set(tickerEl.value, { autoAlpha: 0 })
+    if (rainEl.value) $gsap.set(rainEl.value, { autoAlpha: 0 })
     $gsap.set(safelightEl.value, { opacity: 1 })
     $gsap.set(photoCardEl.value, { opacity: 1, scale: 1 })
     prevStackEls.forEach((el, i) => setStackPose(el, 'prev', i, STACK_LAYER_OPACITY[i] ?? 0.4))
@@ -510,17 +522,16 @@ function setupScene() {
   // legenda nascem fechados/invisíveis e assentam. toggleActions (em vez de
   // once) faz a entrada TOCAR AO CONTRÁRIO quando o scroll volta pra cima —
   // fotos/legenda somem e a fila de letras atravessa de novo, na direção oposta.
-  const letterEls = Array.from(tickerEl.value.querySelectorAll<HTMLElement>('.ticker-letter'))
-  // Cada letra ganha x espalhado pela largura toda, y de partida próprio (alturas
-  // diferentes acima do topo, não uma fileira única) e uma rotação forte tipo
-  // recorte torto (mesma ideia do .ransom-letter do Cover, só que aleatória de
-  // verdade em vez de nth-child — aqui não tem problema de hydration porque só
-  // roda client-side). Pré-posicionadas fora da tela pra não piscar no canto
+  const rainPieces = Array.from(rainEl.value?.querySelectorAll<HTMLElement>('.rain-piece') ?? [])
+  // Cada peça ganha x espalhado pela largura toda, y de partida próprio (alturas
+  // diferentes acima do topo, não uma fileira única) e rotação aleatória (letras:
+  // recorte torto, mesma ideia do .ransom-letter do Cover). Só client-side, sem
+  // problema de hydration. Pré-posicionadas fora da tela pra não piscar no canto
   // superior esquerdo (posição natural do span) um frame antes do scroll disparar.
-  $gsap.set(letterEls, {
+  $gsap.set(rainPieces, {
     x: () => $gsap.utils.random(0, stageWidth),
     y: () => -stageHeight * $gsap.utils.random(0.2, 1.2),
-    rotation: () => $gsap.utils.random(-35, 35)
+    rotation: () => entrance === 'confetti' ? $gsap.utils.random(0, 360) : $gsap.utils.random(-35, 35)
   })
   $gsap.set(safelightEl.value, { opacity: 0 })
 
@@ -588,7 +599,7 @@ function setupScene() {
   // pin) termina de rolar pra fora — o mesmo ponto de scroll em que o texto do
   // Cover (CoverSection.vue) termina de encolher/sumir. Handoff sincronizado
   // sem precisar acoplar os dois componentes diretamente.
-  $gsap.timeline({
+  const tl = $gsap.timeline({
     scrollTrigger: {
       trigger: sectionEl.value,
       // 'top 2px' (não 'top top' exato): no celular (DPR 3) o scroll-snap
@@ -598,37 +609,56 @@ function setupScene() {
       toggleActions: 'play reverse play reverse'
     }
   })
+
+  if (entrance === 'letters') {
     // Queda reta (y) com leve deriva lateral (x relativo) e rotação contínua
-    // somada à inicial (tombando/rodopiando, não só caindo reto) — sem motionPath,
-    // que seria overkill pra uma queda sem curva. stagger "from: random" + duration
-    // função-por-letra tira a sincronia: cada letra cai em ritmo levemente
-    // diferente, tipo chuva de verdade em vez de tudo em bloco.
-    .to(letterEls, {
+    // somada à inicial (tombando/rodopiando, não só caindo reto). stagger "from:
+    // random" + duration por letra tira a sincronia, tipo chuva de verdade.
+    // Curta (0.7–1.1s) e atrás das cópias (z auto < z das pilhas).
+    tl.to(rainPieces, {
       y: () => stageHeight * 1.3,
       x: () => `+=${$gsap.utils.random(-50, 50)}`,
       rotation: () => `+=${$gsap.utils.random(-40, 40)}`,
-      // Curta (0.7–1.1s): a chuva abre a cena e já está saindo por baixo
-      // quando a fila passa — e fica atrás das cópias (z auto < z das
-      // pilhas), então não disputa atenção com ela.
       duration: () => $gsap.utils.random(0.7, 1.1),
       ease: 'power1.in',
       stagger: { each: 0.008, from: 'random' }
     }, 0)
-    // Luz de segurança acende como lâmpada velha: pisca, cai, firma.
-    .to(safelightEl.value, { opacity: 0.85, duration: 0.07, ease: 'none' }, 0.2)
+  } else if (entrance === 'confetti') {
+    // Confete cai mais devagar que as letras, deriva mais pros lados e gira no
+    // eixo X também — é o rotationX que faz o papelzinho "piscar" virando.
+    tl.to(rainPieces, {
+      y: () => stageHeight * 1.2,
+      x: () => `+=${$gsap.utils.random(-120, 120)}`,
+      rotation: () => `+=${$gsap.utils.random(-540, 540)}`,
+      rotationX: () => `+=${$gsap.utils.random(360, 1080)}`,
+      duration: () => $gsap.utils.random(1.3, 2),
+      ease: 'sine.in',
+      stagger: { each: 0.006, from: 'random' }
+    }, 0)
+  }
+
+  // Luz de segurança acende como lâmpada velha: pisca, cai, firma.
+  tl.to(safelightEl.value, { opacity: 0.85, duration: 0.07, ease: 'none' }, 0.2)
     .to(safelightEl.value, { opacity: 0.25, duration: 0.09, ease: 'none' }, 0.27)
     .to(safelightEl.value, { opacity: 1, duration: 0.5, ease: 'power2.out' }, 0.36)
+
+  if (entrance === 'reel') {
     // Passagem: cópias com foto atravessam a tela inteira, uma atrás da
     // outra. Aparecem/somem fora da tela (opacidade só troca lá fora).
-    .addLabel('pass', 0.3)
-    .set(reelEls, { opacity: 1 }, 'pass')
-    .to(reelEls, { x: offLeft, duration: PASS_DURATION, ease: 'power1.inOut', stagger: PASS_STAGGER }, 'pass')
-    .set(reelEls, { opacity: 0 }, `pass+=${(REEL_COUNT - 1) * PASS_STAGGER + PASS_DURATION}`)
-    // Formação: logo atrás da última cópia que passa, as reais entram pela
-    // direita e param nas poses — fundo das pilhas primeiro, topo por último,
-    // cópia central junto das camadas da frente.
-    .addLabel('form', `pass+=${(REEL_COUNT - 2) * PASS_STAGGER + PASS_DURATION * 0.5}`)
-    .set(stackFormEls, { opacity: (_i: number, target: Element) => poseFromDataset(target, 'poseOpacity') }, 'form')
+    tl.addLabel('pass', 0.3)
+      .set(reelEls, { opacity: 1 }, 'pass')
+      .to(reelEls, { x: offLeft, duration: PASS_DURATION, ease: 'power1.inOut', stagger: PASS_STAGGER }, 'pass')
+      .set(reelEls, { opacity: 0 }, `pass+=${(REEL_COUNT - 1) * PASS_STAGGER + PASS_DURATION}`)
+      // Formação logo atrás da última cópia que passa.
+      .addLabel('form', `pass+=${(REEL_COUNT - 2) * PASS_STAGGER + PASS_DURATION * 0.5}`)
+  } else {
+    // Sem passagem: as reais entram enquanto a chuva ainda cai.
+    tl.addLabel('form', RAIN_FORM_AT)
+  }
+
+  // Formação: as reais entram pela direita e param nas poses — fundo das
+  // pilhas primeiro, topo por último, cópia central junto das camadas da frente.
+  tl.set(stackFormEls, { opacity: (_i: number, target: Element) => poseFromDataset(target, 'poseOpacity') }, 'form')
     .to(stackFormEls, {
       x: (_i: number, target: Element) => poseFromDataset(target, 'poseX'),
       duration: FORM_DURATION,
