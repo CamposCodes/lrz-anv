@@ -1001,12 +1001,12 @@ onBeforeUnmount(() => {
 /* Luz de segurança: halo vinho centrado na cópia central (mesmo anchor
    top-[38%] mobile / top-1/2 desktop do template). Só opacidade anima. */
 .safelight {
-  background: radial-gradient(70% 52% at 50% 38%, rgba(160, 26, 14, 0.62) 0%, rgba(82, 0, 0, 0.32) 45%, transparent 80%);
+  background: radial-gradient(70% 52% at 50% 38%, rgba(90, 10, 8, 0.28) 0%, rgba(50, 0, 0, 0.14) 45%, transparent 80%);
 }
 
 @media (min-width: 640px) {
   .safelight {
-    background: radial-gradient(48% 70% at 50% 50%, rgba(160, 26, 14, 0.62) 0%, rgba(82, 0, 0, 0.32) 45%, transparent 80%);
+    background: radial-gradient(48% 70% at 50% 50%, rgba(90, 10, 8, 0.28) 0%, rgba(50, 0, 0, 0.14) 45%, transparent 80%);
   }
 }
 
