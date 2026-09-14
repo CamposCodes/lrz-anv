@@ -82,10 +82,12 @@
            pro captionEl full-width (ver comentário dele). `photoStageEl` já nasce
            absolute/centrado (left-1/2+top-[38%]+translate -50%/-50%, mesmo padrão
            das pilhas) em vez do wrapper flex `h-full` de antes — um nível a menos
-           de DOM, e sendo z-20 continua sempre por cima do captionEl (z-index:auto)
-           mesmo depois dele no DOM, então o clique do botão/seek do
-           AudioMessagePlayer (visualmente abaixo) não é roubado. O drag continua
-           igual: pointer handler no próprio photoStageEl. -->
+           de DOM. z-20: fica abaixo do captionEl (z-30, sempre visível — ver
+           comentário dele) mas acima das pilhas/viajantes, então nunca aparece
+           atrás delas durante a troca. O drag continua igual: pointer handler
+           no próprio photoStageEl — não compete com o captionEl por cliques
+           porque ele é `pointer-events-none` (só o AudioMessagePlayer lá
+           dentro reage a toque). -->
       <!-- Toque/clique sem arrastar (ver onPointerUp) ou Enter/Espaço abre a foto
            em tela cheia. -->
       <div
@@ -270,10 +272,27 @@
            ::before do próprio captionEl, herda a opacity animada pelo GSAP. No
            desktop nada muda: sm:* restaura a coluna lateral original
            (right-10/top-[58%]/max-w-xs/text-right), inclusive o sm:top-[58%] que
-           já corrigia a pilha NEXT encostando no topo da legenda em repouso. -->
+           já corrigia a pilha NEXT encostando no topo da legenda em repouso.
+           `z-30` + `pointer-events-none`: as pilhas (prevStackEls/nextStackEls)
+           recebem zIndex INLINE via GSAP (setStackPose/stackPose, até
+           LAYER_COUNT=3), e o cartão central (photoStageEl) é z-20 DE PROPÓSITO
+           (ver comentário dele) — sem z-index aqui o captionEl (auto) perdia a
+           disputa pros dois, deixando nomes compridos (ex.: "Bruninho,
+           Sobrinho") ilegíveis atrás do bolo de fotos ou (em telas mais
+           estreitas, onde o cartão central — até 28rem de largura — alcança a
+           coluna lateral) atrás da própria foto central (bug reportado, mais
+           visível no desktop mas latente em qualquer breakpoint). z-30 > 20
+           garante a legenda SEMPRE visível, sem exceção — o texto já tem
+           text-shadow pesado (h3) e o `.caption-fade::before` (tailwind.css)
+           pra continuar legível mesmo por cima de uma foto clara.
+           `pointer-events-none` compensa: sem ele, subir o z-index faria o
+           captionEl roubar o arrasto/zoom do cartão em qualquer ponto onde os
+           dois se sobrepõem (mesmo em espaço "vazio" do texto, ex.: as margens
+           do h3). AudioMessagePlayer reativa `pointer-events-auto` no próprio
+           root — é o único filho realmente clicável (play + seek). -->
       <div
         ref="captionEl"
-        class="caption-fade absolute left-6 right-6 bottom-6 isolate text-center opacity-0 sm:left-auto sm:right-10 sm:w-auto sm:bottom-auto sm:top-[58%] sm:max-w-xs sm:text-right sm:-translate-y-1/2"
+        class="caption-fade pointer-events-none absolute left-6 right-6 bottom-6 isolate z-30 text-center opacity-0 sm:left-auto sm:right-10 sm:w-auto sm:bottom-auto sm:top-[58%] sm:max-w-xs sm:text-right sm:-translate-y-1/2"
       >
         <!-- Ordem: assinatura → player → transcrição. De quem é a mensagem
              vem primeiro, o player logo abaixo (o que se toca), e só depois

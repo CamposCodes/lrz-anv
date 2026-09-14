@@ -5,8 +5,11 @@
        waveform ocupando o resto da largura. Sem contador de tempo — a
        waveform/legenda sincronizada já comunicam progresso. A linha de áudio
        assume 100% do seek (clique/arrasto/teclado), sem botões de skip
-       dedicados. -->
-  <div class="flex w-full flex-col gap-1.5">
+       dedicados. `pointer-events-auto`: em ContributorSection.vue este player
+       vive dentro do captionEl, que é `pointer-events-none` inteiro (deixa o
+       cartão central arrastável por baixo do texto da legenda) — sem isso o
+       player herdava o none e ficava inerte a toque/clique. -->
+  <div class="pointer-events-auto flex w-full flex-col gap-1.5">
     <div class="flex items-center gap-3">
       <button
         type="button"
