@@ -6,6 +6,7 @@ import joaoRicardoSegments from './transcripts/mensagem-joao-ricardo.json'
 import arthurDexisSegments from './transcripts/mensagem-arthur-dexis.json'
 import bruninhoSegments from './transcripts/mensagem-bruninho.json'
 import voMaluSegments from './transcripts/mensagem-vo-malu.json'
+import licurciSegments from './transcripts/mensagem-licurci.json'
 
 // Versão das fotos na URL. As fotos foram reexportadas dos originais (proporção
 // real, sem fundo borrado) mantendo os MESMOS nomes de arquivo — sem isso,
@@ -61,13 +62,20 @@ const rawContributors: Contributor[] = [
     transcriptSegments: daviSegments
   },
   {
-    // Foto do show, WebP na proporção original 3:2, sem corte. Áudio ainda não
-    // chegou: quando chegar, salvar em public/audio/mensagem-licurci.mp3, rodar
-    // scripts/transcribe.mjs e preencher audio/message/transcriptSegments igual
-    // aos de cima. Sem mensagem, a seção só não mostra legenda nem verso.
-    name: 'Licurci MC Degrau',
+    // Fotos do show, WebP (sharp: rotate por EXIF, resize inside 1500px,
+    // quality 82 — mesmo tratamento de restore-original-photos.mjs), sem
+    // corte. degrau-show-01 = capa. Áudio convertido do .ogg com ffmpeg:
+    // silêncio das pontas cortado só nas pontas (via areverse, senão
+    // silenceremove trunca no meio numa pausa de fala), passa-alta 70Hz,
+    // loudnorm -16.5 LUFS / pico -1.5 dBTP, MP3 mono 44.1kHz 96kbps (mesmo
+    // formato dos outros). Transcrição do Whisper; corrigido "Licurse"→"Licurci"
+    // (nome próprio).
+    name: 'Licurci MC',
     photo: '/images/degrau/degrau-show-01.webp',
-    message: ''
+    photos: Array.from({ length: 3 }, (_, i) => `/images/degrau/degrau-show-${String(i + 1).padStart(2, '0')}.webp`),
+    audio: '/audio/mensagem-licurci.mp3',
+    message: licurciSegments.map(s => s.text).join(' '),
+    transcriptSegments: licurciSegments
   },
   {
     // Fotos reais (WhatsApp) em WebP na proporção original, sem upscale;
