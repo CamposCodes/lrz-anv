@@ -47,7 +47,7 @@ const rawContributors: Contributor[] = [
     // Sem upscale (vitor-02/10 vieram pequenas). vitor-01 = capa.
     name: 'Vitor, Irmão',
     photo: '/images/vitor/vitor-01.webp',
-    photos: Array.from({ length: 13 }, (_, i) => `/images/vitor/vitor-${String(i + 1).padStart(2, '0')}.webp`),
+    photos: Array.from({ length: 15 }, (_, i) => `/images/vitor/vitor-${String(i + 1).padStart(2, '0')}.webp`),
     audio: '/audio/mensagem-vitor.mp3',
     message: vitorSegments.map(s => s.text).join(' '),
     transcriptSegments: vitorSegments
