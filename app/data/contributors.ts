@@ -208,6 +208,17 @@ const rawContributors: Contributor[] = [
     audio: '/audio/mensagem-bkp.mp3',
     message: bkpSegments.map(s => s.text).join(' '),
     transcriptSegments: bkpSegments
+  },
+  {
+    // Foto WhatsApp em WebP (sharp: rotate por EXIF, resize inside 1500px,
+    // quality 82 — mesmo tratamento dos outros), sem corte. Áudio ainda não
+    // chegou: quando chegar, salvar em public/audio/mensagem-babi-lino.mp3
+    // (mesmo processo dos outros: ffmpeg trim de silêncio + passa-alta 70Hz +
+    // loudnorm -16.5 LUFS/-1.5 dBTP + MP3 mono 44.1kHz 96kbps), rodar
+    // scripts/transcribe.mjs e preencher audio/message/transcriptSegments.
+    name: 'Babi Lino',
+    photo: '/images/babi-lino/babi-lino-01.webp',
+    message: ''
   }
 ]
 
