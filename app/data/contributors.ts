@@ -219,6 +219,22 @@ const rawContributors: Contributor[] = [
     name: 'Babi Lino',
     photo: '/images/babi-lino/babi-lino-01.webp',
     message: ''
+  },
+  {
+    // Fotos WhatsApp em WebP (sharp: rotate por EXIF, resize inside 1500px,
+    // quality 82 — mesmo tratamento dos outros), sem corte. arthur-dma-02
+    // (foto nítida, os dois sorrindo) = capa. Áudio ainda não chegou: quando
+    // chegar, salvar em public/audio/mensagem-arthur-dma.mp3 (mesmo processo
+    // dos outros: ffmpeg trim de silêncio + passa-alta 70Hz + loudnorm -16.5
+    // LUFS/-1.5 dBTP + MP3 mono 44.1kHz 96kbps), rodar scripts/transcribe.mjs
+    // e preencher audio/message/transcriptSegments.
+    name: 'Arthur DMA',
+    photo: '/images/arthur-dma/arthur-dma-02.webp',
+    photos: [
+      '/images/arthur-dma/arthur-dma-02.webp',
+      '/images/arthur-dma/arthur-dma-01.webp'
+    ],
+    message: ''
   }
 ]
 
