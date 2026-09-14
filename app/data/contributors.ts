@@ -7,6 +7,7 @@ import arthurDexisSegments from './transcripts/mensagem-arthur-dexis.json'
 import bruninhoSegments from './transcripts/mensagem-bruninho.json'
 import voMaluSegments from './transcripts/mensagem-vo-malu.json'
 import licurciSegments from './transcripts/mensagem-licurci.json'
+import bkpSegments from './transcripts/mensagem-bkp.json'
 
 // Versão das fotos na URL. As fotos foram reexportadas dos originais (proporção
 // real, sem fundo borrado) mantendo os MESMOS nomes de arquivo — sem isso,
@@ -155,6 +156,24 @@ const rawContributors: Contributor[] = [
       ...Array.from({ length: 4 }, (_, i) => `/images/lucas/lucas-${String(i + 13).padStart(2, '0')}.webp`)
     ],
     message: ''
+  },
+  {
+    // Fotos WhatsApp em WebP (sharp: rotate por EXIF, resize inside 1500px,
+    // quality 82 — mesmo tratamento dos outros), sem corte. bkp-01 (foto do
+    // show, still nítido) = capa. Áudio veio como .mp4/AAC; convertido pro
+    // padrão dos outros com ffmpeg: silêncio das pontas cortado (areverse),
+    // passa-alta 70Hz, loudnorm -16.5 LUFS / pico -1.5 dBTP, MP3 mono 44.1kHz
+    // 96kbps. Transcrição: Whisper medium; corrigido "pertecente"→"pertencente"
+    // (erro de reconhecimento, não da fala).
+    name: 'BKP',
+    photo: '/images/bkp/bkp-01.webp',
+    photos: [
+      '/images/bkp/bkp-01.webp',
+      '/images/bkp/bkp-02.webp'
+    ],
+    audio: '/audio/mensagem-bkp.mp3',
+    message: bkpSegments.map(s => s.text).join(' '),
+    transcriptSegments: bkpSegments
   }
 ]
 
