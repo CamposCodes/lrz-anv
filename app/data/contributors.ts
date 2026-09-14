@@ -54,7 +54,7 @@ const rawContributors: Contributor[] = [
   },
   {
     // Foto única (WhatsApp) na proporção original (9:16), sem corte.
-    name: 'Davi Dooup, Degrau',
+    name: 'Davi Dooup',
     photo: '/images/davi/davi-01.webp',
     audio: '/audio/mensagem-davi.mp3',
     message: daviSegments.map(s => s.text).join(' '),
