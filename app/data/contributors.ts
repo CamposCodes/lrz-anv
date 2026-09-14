@@ -116,7 +116,12 @@ const rawContributors: Contributor[] = [
     // como WAV editado; convertido pro padrão dos outros (MP3 mono 44.1kHz
     // 96kbps, loudnorm -16.5 LUFS). Transcrição: Whisper medium.
     // Quando a foto chegar: WebP em public/images/bruninho/ e preencher `photo`.
+    // Fotos WhatsApp em WebP (sharp: rotate por EXIF, resize inside 1500px,
+    // quality 82 — mesmo tratamento dos outros), sem corte. bruninho-01
+    // (abraço em família) = capa.
     name: 'Bruninho, Sobrinho',
+    photo: '/images/bruninho/bruninho-01.webp',
+    photos: Array.from({ length: 4 }, (_, i) => `/images/bruninho/bruninho-${String(i + 1).padStart(2, '0')}.webp`),
     audio: '/audio/mensagem-bruninho.mp3',
     message: bruninhoSegments.map(s => s.text).join(' '),
     transcriptSegments: bruninhoSegments
