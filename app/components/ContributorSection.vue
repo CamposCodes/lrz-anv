@@ -158,6 +158,33 @@
               >
                 {{ contributor.name.split(',')[0] }}
               </div>
+
+              <!-- Controle PRÓPRIO do vídeo-recordação (Breno/Vitor/Lucas):
+                   overlay DENTRO da moldura (`.print` já é `position:
+                   relative`), ancorado no canto do VÍDEO (bottom/right
+                   compensando `--frame`, o padding da moldura) em vez de
+                   `top-full` abaixo do cartão inteiro — essa posição antiga
+                   dependia de quanto espaço sobrava até a legenda, que no
+                   mobile é uma faixa full-width no rodapé: com um vídeo alto
+                   (Breno, 9:16-ish) ou tela baixa, o botão caía em cima do
+                   nome/texto da legenda (bug reportado). Como overlay, nunca
+                   mais depende desse espaço, em nenhum breakpoint.
+                   pointerdown/click.stop: o pai (photoStageEl) escuta esses
+                   mesmos eventos pra arrastar/abrir lightbox — sem parar a
+                   propagação, o clique no botão também contaria como toque
+                   no cartão. -->
+              <button
+                v-if="isStackVideo"
+                type="button"
+                class="absolute bottom-[calc(var(--frame)+0.5rem)] right-[calc(var(--frame)+0.5rem)] z-10 flex size-11 items-center justify-center rounded-full border-0 bg-black/45 text-white outline-offset-4 backdrop-blur-sm transition-transform duration-150 ease-out motion-reduce:transition-none active:scale-90"
+                :aria-label="stackVideoPlaying ? 'Pausar vídeo' : 'Tocar vídeo'"
+                :aria-pressed="stackVideoPlaying"
+                @pointerdown.stop
+                @click.stop="toggleStackVideo"
+              >
+                <Pause v-if="stackVideoPlaying" fill="currentColor" class="size-5" />
+                <Play v-else fill="currentColor" class="size-5 translate-x-px" />
+              </button>
             </div>
             <!-- Verso: mesma caixa, pré-girado 180° (estático) — só aparece
                  quando o pai (photoCardEl) gira e o backface-visibility do
@@ -186,27 +213,6 @@
             </div>
           </div>
         </div>
-
-        <!-- Controle PRÓPRIO do vídeo-recordação (Breno/Vitor/Lucas): irmão de
-             photoCardEl (não filho — não deve girar com o flip), ancorado
-             logo abaixo da moldura via top-full. Existe só pra este vídeo, não
-             disputa espaço com o AudioMessagePlayer da legenda (que continua
-             tocando `contributor.audio` o tempo todo, ver comentário lá).
-             pointerdown/click.stop: o pai (photoStageEl) escuta esses mesmos
-             eventos pra arrastar/abrir lightbox — sem parar a propagação, o
-             clique no botão também contaria como toque no cartão. -->
-        <button
-          v-if="isStackVideo"
-          type="button"
-          class="absolute left-1/2 top-full z-10 mt-3 flex size-11 -translate-x-1/2 items-center justify-center rounded-full border-0 bg-black/45 text-white outline-offset-4 backdrop-blur-sm transition-transform duration-150 ease-out motion-reduce:transition-none active:scale-90"
-          :aria-label="stackVideoPlaying ? 'Pausar vídeo' : 'Tocar vídeo'"
-          :aria-pressed="stackVideoPlaying"
-          @pointerdown.stop
-          @click.stop="toggleStackVideo"
-        >
-          <Pause v-if="stackVideoPlaying" fill="currentColor" class="size-5" />
-          <Play v-else fill="currentColor" class="size-5 translate-x-px" />
-        </button>
       </div>
 
       <!-- Ícone + rótulo de virar foto — canto superior-esquerdo do stage
