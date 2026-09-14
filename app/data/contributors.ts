@@ -134,6 +134,27 @@ const rawContributors: Contributor[] = [
     audio: '/audio/mensagem-vo-malu.mp3',
     message: voMaluSegments.map(s => s.text).join(' '),
     transcriptSegments: voMaluSegments
+  },
+  {
+    // Pasta do WhatsApp com 11 fotos (scripts/restore-original-photos.mjs,
+    // mesmo pipeline: rotate por EXIF, resize inside 1500px, webp quality 82,
+    // sem upscale) — da infância até fotos recentes. lucas-11 (selfie atual,
+    // nítida) = capa, primeiro na lista pra pilha começar nela. lucas-12..16
+    // vieram depois, soltas no meio/fim da pilha. Áudio da mensagem ainda não
+    // chegou: quando chegar, salvar em public/audio/mensagem-lucas.mp3 (mesmo
+    // processo dos outros: ffmpeg trim de silêncio + passa-alta 70Hz +
+    // loudnorm -16.5 LUFS/-1.5 dBTP + MP3 mono 44.1kHz 96kbps), rodar
+    // scripts/transcribe.mjs e preencher audio/message/transcriptSegments.
+    name: 'Lucas, Primo',
+    photo: '/images/lucas/lucas-11.webp',
+    photos: [
+      '/images/lucas/lucas-11.webp',
+      ...Array.from({ length: 5 }, (_, i) => `/images/lucas/lucas-${String(i + 1).padStart(2, '0')}.webp`),
+      '/images/lucas/lucas-12.webp',
+      ...Array.from({ length: 5 }, (_, i) => `/images/lucas/lucas-${String(i + 6).padStart(2, '0')}.webp`),
+      ...Array.from({ length: 4 }, (_, i) => `/images/lucas/lucas-${String(i + 13).padStart(2, '0')}.webp`)
+    ],
+    message: ''
   }
 ]
 

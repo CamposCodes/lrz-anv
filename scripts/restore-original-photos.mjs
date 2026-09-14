@@ -20,9 +20,11 @@ const IMAGES = join(import.meta.dirname, '..', 'public', 'images')
 
 const PAI_DIR = join(DOWNLOADS, 'WhatsApp Unknown 2026-09-12 at 15.17.55')
 const VITOR_DIR = join(DOWNLOADS, 'WhatsApp Unknown 2026-09-13 at 10.19.37')
+const LUCAS_DIR = join(DOWNLOADS, 'WhatsApp Unknown 2026-09-14 at 14.14.38')
 const vitor = name => join(VITOR_DIR, `WhatsApp Image 2026-09-13 at ${name}.jpeg`)
 
 const paiFiles = readdirSync(PAI_DIR).filter(f => /\.jpe?g$/i.test(f)).sort()
+const lucasFiles = readdirSync(LUCAS_DIR).filter(f => /\.jpe?g$/i.test(f)).sort()
 
 const MAP = {
   ...Object.fromEntries(paiFiles
@@ -40,7 +42,9 @@ const MAP = {
   'vitor/vitor-10.webp': vitor('10.19.27 (2)'),
   'vitor/vitor-12.webp': vitor('10.19.28 (1)'),
   'vitor/vitor-13.webp': vitor('10.19.28'),
-  'davi/davi-01.webp': join(DOWNLOADS, 'WhatsApp Image 2026-09-11 at 16.13.55.jpeg')
+  'davi/davi-01.webp': join(DOWNLOADS, 'WhatsApp Image 2026-09-11 at 16.13.55.jpeg'),
+  ...Object.fromEntries(lucasFiles
+    .map((f, i) => [`lucas/lucas-${String(i + 1).padStart(2, '0')}.webp`, join(LUCAS_DIR, f)]))
 }
 
 function exportWebp(image, out) {
