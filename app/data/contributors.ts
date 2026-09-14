@@ -8,6 +8,7 @@ import bruninhoSegments from './transcripts/mensagem-bruninho.json'
 import voMaluSegments from './transcripts/mensagem-vo-malu.json'
 import licurciSegments from './transcripts/mensagem-licurci.json'
 import bkpSegments from './transcripts/mensagem-bkp.json'
+import brenoSegments from './transcripts/mensagem-breno.json'
 
 // Versão das fotos na URL. As fotos foram reexportadas dos originais (proporção
 // real, sem fundo borrado) mantendo os MESMOS nomes de arquivo — sem isso,
@@ -137,6 +138,39 @@ const rawContributors: Contributor[] = [
     transcriptSegments: voMaluSegments
   },
   {
+    // Foto original é UMA colagem 2x2 (WhatsApp, 708x708) com 4 fotos coladas
+    // lado a lado — dividida em breno-01..04 com sharp (margem de 4px em cada
+    // corte pra não pegar a linha branca fina do grid). breno-03 (sinal de paz)
+    // = capa, primeiro na lista pra pilha começar exatamente nela. Áudio
+    // convertido do .ogg/Opus com ffmpeg: silêncio das pontas cortado
+    // (areverse), passa-alta 70Hz, loudnorm -16.5 LUFS / pico -1.5 dBTP, MP3
+    // mono 44.1kHz 96kbps (mesmo formato dos outros). Transcrição: Whisper medium.
+    // Vídeo (WhatsApp, 464x832, 37s) misturado na pilha entre as fotos: sem
+    // legenda própria, dá play sozinho ao virar o item central (ver
+    // ContributorSection.vue). Reencodado com ffmpeg: denoise leve (hqdn3d),
+    // 30fps, áudio mono normalizado (-16.5 LUFS, passa-alta 70Hz), faststart.
+    // H.264 (4.9MB) + AV1 (3.1MB, mais leve) a partir do original de 7.8MB.
+    // Poster: quadro de 22s em WebP.
+    name: 'Breno Prenassi',
+    photo: '/images/breno/breno-03.webp',
+    photos: [
+      '/images/breno/breno-03.webp',
+      '/images/breno/breno-01.webp',
+      {
+        h264: '/video/mensagem-breno.mp4',
+        av1: '/video/mensagem-breno.av1.mp4',
+        poster: '/images/breno/breno-video-poster.webp',
+        width: 464,
+        height: 832
+      },
+      '/images/breno/breno-02.webp',
+      '/images/breno/breno-04.webp'
+    ],
+    audio: '/audio/mensagem-breno.mp3',
+    message: brenoSegments.map(s => s.text).join(' '),
+    transcriptSegments: brenoSegments
+  },
+  {
     // Pasta do WhatsApp com 11 fotos (scripts/restore-original-photos.mjs,
     // mesmo pipeline: rotate por EXIF, resize inside 1500px, webp quality 82,
     // sem upscale) — da infância até fotos recentes. lucas-11 (selfie atual,
@@ -180,5 +214,8 @@ const rawContributors: Contributor[] = [
 export const contributors: Contributor[] = rawContributors.map(c => ({
   ...c,
   photo: c.photo && versioned(c.photo),
-  photos: c.photos?.map(versioned)
+  // Item de vídeo (ContributorPhotoVideo) não é string — versionar só o
+  // `poster` (é ele que serve de <img>/capa; h264/av1 não têm o problema de
+  // cache de 1 dia do netlify.toml que motivou PHOTO_VERSION).
+  photos: c.photos?.map(p => typeof p === 'string' ? versioned(p) : { ...p, poster: versioned(p.poster) })
 }))

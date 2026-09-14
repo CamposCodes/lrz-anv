@@ -7,6 +7,22 @@ export const useAudioPlayer = () => {
   const currentTime = ref(0)
   const duration = ref(0)
 
+  // Assume o controle incondicionalmente (não olha `isPlaying` local) — pra
+  // autoplay disparado pelo sistema (ex.: vídeo que vira o item central do
+  // carrossel em ContributorSection.vue), onde não dá pra confiar que o
+  // estado local já reflita o real (o <video> pode ter sido criado agora
+  // mesmo). Mesmo efeito colateral de `toggle` ao dar play: pausa qualquer
+  // outro áudio/vídeo tocando em QUALQUER seção antes de tocar este.
+  const play = () => {
+    const el = audioRef.value
+    if (!el) return
+    if (activeAudio.value && activeAudio.value !== el) {
+      activeAudio.value.pause()
+    }
+    activeAudio.value = el
+    el.play()
+  }
+
   const toggle = () => {
     const el = audioRef.value
     if (!el) return
@@ -16,11 +32,7 @@ export const useAudioPlayer = () => {
       return
     }
 
-    if (activeAudio.value && activeAudio.value !== el) {
-      activeAudio.value.pause()
-    }
-    activeAudio.value = el
-    el.play()
+    play()
   }
 
   const seek = (time: number) => {
@@ -43,6 +55,7 @@ export const useAudioPlayer = () => {
     currentTime,
     duration,
     toggle,
+    play,
     seek,
     skip,
     onPlay: () => { isPlaying.value = true },

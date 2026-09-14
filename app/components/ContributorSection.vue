@@ -125,17 +125,17 @@
                    de reserva. Sem controles nativos: quem toca/pausa/avança é
                    o player da onda na legenda. -->
               <video
-                v-if="contributor.video"
+                v-if="current?.video"
                 ref="photoImgEl"
                 class="print-video"
-                :style="{ '--video-ratio': contributor.video.height / contributor.video.width }"
+                :style="{ '--video-ratio': current.video.height / current.video.width }"
                 :poster="current?.photo"
                 :aria-label="`Mensagem em vídeo de ${contributor.name}`"
                 playsinline
                 preload="metadata"
               >
-                <source v-if="contributor.video.av1" :src="contributor.video.av1" type="video/mp4; codecs=av01.0.05M.08">
-                <source :src="contributor.video.h264" type="video/mp4">
+                <source v-if="current.video.av1" :src="current.video.av1" type="video/mp4; codecs=av01.0.05M.08">
+                <source :src="current.video.h264" type="video/mp4">
               </video>
               <img
                 v-else-if="current?.photo"
@@ -186,6 +186,27 @@
             </div>
           </div>
         </div>
+
+        <!-- Controle PRÓPRIO do vídeo-recordação (Breno/Vitor/Lucas): irmão de
+             photoCardEl (não filho — não deve girar com o flip), ancorado
+             logo abaixo da moldura via top-full. Existe só pra este vídeo, não
+             disputa espaço com o AudioMessagePlayer da legenda (que continua
+             tocando `contributor.audio` o tempo todo, ver comentário lá).
+             pointerdown/click.stop: o pai (photoStageEl) escuta esses mesmos
+             eventos pra arrastar/abrir lightbox — sem parar a propagação, o
+             clique no botão também contaria como toque no cartão. -->
+        <button
+          v-if="isStackVideo"
+          type="button"
+          class="absolute left-1/2 top-full z-10 mt-3 flex size-11 -translate-x-1/2 items-center justify-center rounded-full border-0 bg-black/45 text-white outline-offset-4 backdrop-blur-sm transition-transform duration-150 ease-out motion-reduce:transition-none active:scale-90"
+          :aria-label="stackVideoPlaying ? 'Pausar vídeo' : 'Tocar vídeo'"
+          :aria-pressed="stackVideoPlaying"
+          @pointerdown.stop
+          @click.stop="toggleStackVideo"
+        >
+          <Pause v-if="stackVideoPlaying" fill="currentColor" class="size-5" />
+          <Play v-else fill="currentColor" class="size-5 translate-x-px" />
+        </button>
       </div>
 
       <!-- Ícone + rótulo de virar foto — canto superior-esquerdo do stage
@@ -262,10 +283,18 @@
           {{ contributor.name }}
         </h3>
 
+        <!-- `contributor.video` (fixo, não `current.video`): controla o vídeo
+             SÓ quando ele é a própria mensagem (Arthur Dexis, sem `photos`).
+             Um vídeo dentro da pilha (Breno/Vitor/Lucas) não deve tomar conta
+             deste player — ele toca junto de `contributor.audio` sempre, e o
+             vídeo ganha um controle próprio abaixo da moldura (ver botão em
+             photoStageEl); a única regra entre os dois é não tocar ao mesmo
+             tempo (garantida pelo `activeAudio` de useAudioPlayer.ts, que os
+             dois players compartilham). -->
         <AudioMessagePlayer
           v-if="contributor.audio || contributor.video"
           :src="contributor.audio ?? contributor.video?.h264 ?? ''"
-          :media="videoEl"
+          :media="topVideoEl"
           @timeupdate="onAudioTime"
         />
 
@@ -312,11 +341,11 @@
           class="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4 sm:p-10"
           role="dialog"
           aria-modal="true"
-          :aria-label="contributor.video ? `Vídeo de ${contributor.name}` : `Foto de ${contributor.name}`"
+          :aria-label="current?.video ? `Vídeo de ${contributor.name}` : `Foto de ${contributor.name}`"
           @click.self="closeLightbox"
         >
           <div
-            v-if="contributor.video"
+            v-if="current?.video"
             class="lightbox-photo flex flex-col items-center gap-4"
             @click.self="closeLightbox"
           >
@@ -326,18 +355,18 @@
               <video
                 ref="lightboxVideoEl"
                 class="lightbox-video"
-                :style="{ '--video-ratio': contributor.video.height / contributor.video.width }"
+                :style="{ '--video-ratio': current.video.height / current.video.width }"
                 :poster="current?.photo"
                 playsinline
                 preload="metadata"
               >
-                <source v-if="contributor.video.av1" :src="contributor.video.av1" type="video/mp4; codecs=av01.0.05M.08">
-                <source :src="contributor.video.h264" type="video/mp4">
+                <source v-if="current.video.av1" :src="current.video.av1" type="video/mp4; codecs=av01.0.05M.08">
+                <source :src="current.video.h264" type="video/mp4">
               </video>
             </div>
             <div class="w-full max-w-md">
               <AudioMessagePlayer
-                :src="contributor.video.h264"
+                :src="current.video.h264"
                 :media="lightboxVideoEl"
                 @timeupdate="onAudioTime"
               />
@@ -374,7 +403,7 @@
 </template>
 
 <script setup lang="ts">
-import { RotateCcw, X } from '@lucide/vue'
+import { RotateCcw, X, Play, Pause } from '@lucide/vue'
 import type { Contributor } from '@/types'
 import { carouselWindow, step, wrapIndex } from '@/utils/carousel'
 
@@ -398,8 +427,14 @@ const entrance = rotated === 'reel' && !props.contributor.photo ? 'confetti' : r
 const photoPool = computed(() => {
   // Sem foto nenhuma ainda: pool de 1 entrada vazia (sem carrossel; o cartão
   // central vira papel em branco com o nome, ver template).
-  const photos = props.contributor.photos?.length ? props.contributor.photos : [props.contributor.photo ?? '']
-  return photos.map(photo => ({ ...props.contributor, photo }))
+  const items = props.contributor.photos?.length ? props.contributor.photos : [props.contributor.photo ?? '']
+  // Item de vídeo (ContributorPhotoVideo) vira a foto central quando é a vez
+  // dele: `photo` recebe o poster (usado nas pilhas/mural/mesmo antes do play)
+  // e `video` o próprio vídeo — o template troca <img> por <video> conforme
+  // `current.video` (mesmo mecanismo do vídeo de topo do Arthur Dexis).
+  return items.map(item => typeof item === 'string'
+    ? { ...props.contributor, photo: item }
+    : { ...props.contributor, photo: item.poster, video: item })
 })
 
 // Com uma foto só não há carrossel: os bolos laterais somem (v-show, o DOM
@@ -416,7 +451,7 @@ function onLightboxKey(e: KeyboardEvent) {
 }
 
 // Sem foto nem vídeo não há o que ampliar.
-const canZoom = computed(() => !!(props.contributor.video || props.contributor.photo))
+const canZoom = computed(() => !!(current.value?.video || current.value?.photo))
 
 function openLightbox() {
   if (lightboxOpen.value || isFlipped.value || !canZoom.value) return
@@ -491,6 +526,13 @@ const activeSegmentText = computed(() => {
   return candidate.text
 })
 
+// Legenda sempre acompanha `contributor.audio` (via activeSegmentText,
+// alimentado por audioTime do player principal) — nunca zera por causa do
+// vídeo-recordação na pilha (Breno/etc): esse vídeo tem controle próprio
+// (toggleStackVideo) e nunca alimenta audioTime, então mostrar a legenda
+// junto dele não dessincroniza nada. O pedido é explícito: sempre que o
+// áudio tocar, a transcrição aparece — independente do que estiver no centro
+// do carrossel.
 const displayedMessage = computed(() => {
   if (activeSegmentText.value) return activeSegmentText.value
   return props.contributor.message
@@ -503,7 +545,16 @@ const photoStageEl = ref<HTMLElement | null>(null)
 const photoCardEl = ref<HTMLElement | null>(null)
 const photoImgEl = ref<HTMLElement | null>(null)
 // Mensagem em vídeo: o mesmo ref do cartão central é o <video> (ver template).
-const videoEl = computed(() => props.contributor.video ? photoImgEl.value as HTMLVideoElement | null : null)
+// `current.video` cobre tanto o vídeo de topo (Arthur Dexis, único item do
+// pool) quanto um vídeo dentro da pilha de fotos (item central mudando) —
+// usado pelo lightbox e por canZoom/toggleFlip, que tratam os dois tipos
+// igual (ampliar/girar independem de quem controla o play).
+const videoEl = computed(() => current.value?.video ? photoImgEl.value as HTMLVideoElement | null : null)
+// Vídeo de TOPO (Arthur Dexis): `contributor.video` é fixo, não muda com o
+// carrossel (ele nem tem `photos`) — é o único caso em que o AudioMessagePlayer
+// da legenda deve controlar o <video> (ver template). Um vídeo dentro da
+// pilha nunca cai aqui, mesmo sendo `current`.
+const topVideoEl = computed(() => props.contributor.video ? photoImgEl.value as HTMLVideoElement | null : null)
 const safelightEl = ref<HTMLElement | null>(null)
 const travelInEl = ref<HTMLElement | null>(null)
 const travelInImgEl = ref<HTMLImageElement | null>(null)
@@ -537,6 +588,50 @@ const LAYER_COUNT = 3
 const currentIndex = ref(0)
 const carousel = computed(() => carouselWindow(currentIndex.value, photoPool.value.length, LAYER_COUNT))
 const current = computed(() => photoPool.value[carousel.value.current]!)
+
+// Vídeo-recordação (dentro de `photos`, ex. Breno/Vitor/Lucas): tem controle
+// PRÓPRIO (botão abaixo da moldura, ver template) em vez de tomar conta do
+// player da legenda — esse continua sempre tocando `contributor.audio`.
+const isStackVideo = computed(() => !!(current.value?.video && props.contributor.photos))
+const stackVideoEl = computed(() => isStackVideo.value ? photoImgEl.value as HTMLVideoElement | null : null)
+const {
+  audioRef: stackVideoRef,
+  isPlaying: stackVideoPlaying,
+  toggle: toggleStackVideo,
+  play: playStackVideo
+} = useAudioPlayer()
+// `audioRef` do composable é um ref simples (não computed) — precisa ser
+// sincronizado manualmente sempre que o elemento de vídeo mudar (troca de
+// item central, ou o <video> sendo criado/destruído pelo v-if do template).
+watch(stackVideoEl, (el) => { stackVideoRef.value = el }, { immediate: true })
+// Mesmos eventos que o <audio> interno do AudioMessagePlayer escuta —
+// registrados manualmente aqui porque este <video> nunca passa pela prop
+// `media` dele (é controlado pelo botão próprio, não pelo player da legenda).
+const STACK_VIDEO_EVENTS = [
+  ['play', () => { stackVideoPlaying.value = true }],
+  ['pause', () => { stackVideoPlaying.value = false }],
+  ['ended', () => { stackVideoPlaying.value = false }]
+] as const
+watch(stackVideoEl, (el, _old, onCleanup) => {
+  if (!el) return
+  STACK_VIDEO_EVENTS.forEach(([name, handler]) => el.addEventListener(name, handler))
+  onCleanup(() => STACK_VIDEO_EVENTS.forEach(([name, handler]) => el.removeEventListener(name, handler)))
+}, { immediate: true })
+
+// Vídeo dentro da pilha: dá play sozinho ao virar o item central (ex.: Breno
+// Prenassi). Só na troca de verdade — nunca na entrada da seção, que não é um
+// gesto do usuário e o navegador bloquearia o autoplay com som mesmo assim
+// (é mudo de qualquer forma, mas o gesto continua sendo a troca de carrossel,
+// não o carregamento da seção). `playStackVideo` (não `.play()` direto):
+// mesma regra dos dois controles desta seção nunca tocarem juntos — assume o
+// vídeo como `activeAudio` e pausa `contributor.audio` se estiver tocando.
+// Sair do vídeo não precisa de pausa explícita: o <video> desmonta (v-if do
+// template troca pra <img>) assim que `current.video` deixa de ser dele.
+watch(current, (item) => {
+  if (!item?.video || !props.contributor.photos) return
+  nextTick(() => playStackVideo())
+})
+
 const prevDeque = computed(() => carousel.value.prev.map(i => photoPool.value[i]!))
 const nextDeque = computed(() => carousel.value.next.map(i => photoPool.value[i]!))
 // Fotos das cópias que passam na entrada: as que vêm ANTES da pilha prev na
