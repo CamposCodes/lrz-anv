@@ -9,6 +9,17 @@ import voMaluSegments from './transcripts/mensagem-vo-malu.json'
 import licurciSegments from './transcripts/mensagem-licurci.json'
 import bkpSegments from './transcripts/mensagem-bkp.json'
 import brenoSegments from './transcripts/mensagem-breno.json'
+import babiSegments from './transcripts/mensagem-babi.json'
+import lucasPrimoSegments from './transcripts/mensagem-lucas-primo.json'
+import claudiaKaliSegments from './transcripts/mensagem-claudia-kali.json'
+import gabrielVassouraSegments from './transcripts/mensagem-gabriel-vassoura.json'
+import gabiSegments from './transcripts/mensagem-gabi.json'
+import ronaldinhoSegments from './transcripts/mensagem-ronaldinho.json'
+import tioGuSegments from './transcripts/mensagem-tio-gu.json'
+import voReginaSegments from './transcripts/mensagem-vo-regina.json'
+import tiaSelmaSegments from './transcripts/mensagem-tia-selma.json'
+import tioRonaldoSegments from './transcripts/mensagem-tio-ronaldo.json'
+import joaoGabrielSegments from './transcripts/mensagem-joao-gabriel.json'
 
 // Versão das fotos na URL. As fotos foram reexportadas dos originais (proporção
 // real, sem fundo borrado) mantendo os MESMOS nomes de arquivo — sem isso,
@@ -114,16 +125,18 @@ const rawContributors: Contributor[] = [
     transcriptSegments: arthurDexisSegments
   },
   {
-    // Sem foto por enquanto (cartão de papel em branco com o nome). Áudio veio
-    // como WAV editado; convertido pro padrão dos outros (MP3 mono 44.1kHz
-    // 96kbps, loudnorm -16.5 LUFS). Transcrição: Whisper medium.
-    // Quando a foto chegar: WebP em public/images/bruninho/ e preencher `photo`.
+    // Áudio veio como WAV editado; convertido pro padrão dos outros (MP3 mono
+    // 44.1kHz 96kbps, loudnorm -16.5 LUFS). Transcrição: Whisper medium.
     // Fotos WhatsApp em WebP (sharp: rotate por EXIF, resize inside 1500px,
-    // quality 82 — mesmo tratamento dos outros), sem corte. bruninho-01
-    // (abraço em família) = capa.
+    // quality 82 — mesmo tratamento dos outros), sem corte. bruninho-05 (com
+    // o pai jogando videogame) = capa, primeiro na lista pra pilha começar
+    // nela; bruninho-01 (abraço em família) logo em seguida.
     name: 'Bruninho, Sobrinho',
-    photo: '/images/bruninho/bruninho-01.webp',
-    photos: Array.from({ length: 4 }, (_, i) => `/images/bruninho/bruninho-${String(i + 1).padStart(2, '0')}.webp`),
+    photo: '/images/bruninho/bruninho-05.webp',
+    photos: [
+      '/images/bruninho/bruninho-05.webp',
+      ...Array.from({ length: 4 }, (_, i) => `/images/bruninho/bruninho-${String(i + 1).padStart(2, '0')}.webp`)
+    ],
     audio: '/audio/mensagem-bruninho.mp3',
     message: bruninhoSegments.map(s => s.text).join(' '),
     transcriptSegments: bruninhoSegments
@@ -175,11 +188,10 @@ const rawContributors: Contributor[] = [
     // mesmo pipeline: rotate por EXIF, resize inside 1500px, webp quality 82,
     // sem upscale) — da infância até fotos recentes. lucas-11 (selfie atual,
     // nítida) = capa, primeiro na lista pra pilha começar nela. lucas-12..16
-    // vieram depois, soltas no meio/fim da pilha. Áudio da mensagem ainda não
-    // chegou: quando chegar, salvar em public/audio/mensagem-lucas.mp3 (mesmo
-    // processo dos outros: ffmpeg trim de silêncio + passa-alta 70Hz +
-    // loudnorm -16.5 LUFS/-1.5 dBTP + MP3 mono 44.1kHz 96kbps), rodar
-    // scripts/transcribe.mjs e preencher audio/message/transcriptSegments.
+    // vieram depois, soltas no meio/fim da pilha. Áudio convertido do .ogg
+    // com ffmpeg: silêncio das pontas cortado (areverse), passa-alta 70Hz,
+    // loudnorm -16.5 LUFS / pico -1.5 dBTP, MP3 mono 44.1kHz 96kbps.
+    // Transcrição: Whisper medium.
     name: 'Lucas, Primo',
     photo: '/images/lucas/lucas-11.webp',
     photos: [
@@ -189,7 +201,9 @@ const rawContributors: Contributor[] = [
       ...Array.from({ length: 5 }, (_, i) => `/images/lucas/lucas-${String(i + 6).padStart(2, '0')}.webp`),
       ...Array.from({ length: 4 }, (_, i) => `/images/lucas/lucas-${String(i + 13).padStart(2, '0')}.webp`)
     ],
-    message: ''
+    audio: '/audio/mensagem-lucas-primo.mp3',
+    message: lucasPrimoSegments.map(s => s.text).join(' '),
+    transcriptSegments: lucasPrimoSegments
   },
   {
     // Fotos WhatsApp em WebP (sharp: rotate por EXIF, resize inside 1500px,
@@ -199,7 +213,7 @@ const rawContributors: Contributor[] = [
     // passa-alta 70Hz, loudnorm -16.5 LUFS / pico -1.5 dBTP, MP3 mono 44.1kHz
     // 96kbps. Transcrição: Whisper medium; corrigido "pertecente"→"pertencente"
     // (erro de reconhecimento, não da fala).
-    name: 'BKP',
+    name: 'Vitor, BKP',
     photo: '/images/bkp/bkp-01.webp',
     photos: [
       '/images/bkp/bkp-01.webp',
@@ -211,14 +225,15 @@ const rawContributors: Contributor[] = [
   },
   {
     // Foto WhatsApp em WebP (sharp: rotate por EXIF, resize inside 1500px,
-    // quality 82 — mesmo tratamento dos outros), sem corte. Áudio ainda não
-    // chegou: quando chegar, salvar em public/audio/mensagem-babi-lino.mp3
-    // (mesmo processo dos outros: ffmpeg trim de silêncio + passa-alta 70Hz +
-    // loudnorm -16.5 LUFS/-1.5 dBTP + MP3 mono 44.1kHz 96kbps), rodar
-    // scripts/transcribe.mjs e preencher audio/message/transcriptSegments.
+    // quality 82 — mesmo tratamento dos outros), sem corte. Áudio veio como
+    // .wav; convertido pro padrão dos outros com ffmpeg: silêncio das pontas
+    // cortado (areverse), passa-alta 70Hz, loudnorm -16.5 LUFS / pico
+    // -1.5 dBTP, MP3 mono 44.1kHz 96kbps. Transcrição: Whisper medium.
     name: 'Babi Lino',
     photo: '/images/babi-lino/babi-lino-01.webp',
-    message: ''
+    audio: '/audio/mensagem-babi.mp3',
+    message: babiSegments.map(s => s.text).join(' '),
+    transcriptSegments: babiSegments
   },
   {
     // Fotos WhatsApp em WebP (sharp: rotate por EXIF, resize inside 1500px,
@@ -235,6 +250,130 @@ const rawContributors: Contributor[] = [
       '/images/arthur-dma/arthur-dma-01.webp'
     ],
     message: ''
+  },
+  {
+    // Fotos WhatsApp em WebP (sharp: rotate por EXIF, resize inside 1500px,
+    // quality 82 — mesmo tratamento dos outros), sem corte; gabriel-vassoura-01
+    // (manobra de skate) teve as barras pretas de letterbox cortadas com
+    // sharp .trim() antes do resize. Áudio veio como .ogg; convertido pro
+    // padrão dos outros com ffmpeg: silêncio das pontas cortado (areverse),
+    // passa-alta 70Hz, loudnorm -16.5 LUFS / pico -1.5 dBTP, MP3 mono
+    // 44.1kHz 96kbps. Transcrição: Whisper medium.
+    name: 'Gabriel Vassoura',
+    photo: '/images/gabriel-vassoura/gabriel-vassoura-01.webp',
+    photos: [
+      '/images/gabriel-vassoura/gabriel-vassoura-01.webp',
+      '/images/gabriel-vassoura/gabriel-vassoura-02.webp'
+    ],
+    audio: '/audio/mensagem-gabriel-vassoura.mp3',
+    message: gabrielVassouraSegments.map(s => s.text).join(' '),
+    transcriptSegments: gabrielVassouraSegments
+  },
+  {
+    // Time de Muay Thai (foto em grupo). Fotos WhatsApp em WebP (sharp:
+    // rotate por EXIF, resize inside 1500px, quality 82 — mesmo tratamento
+    // dos outros), sem corte. Sem áudio (mensagem coletiva, só fotos).
+    name: 'Muay Thai',
+    photo: '/images/muay-thai/muay-thai-01.webp',
+    photos: [
+      '/images/muay-thai/muay-thai-01.webp',
+      '/images/muay-thai/muay-thai-02.webp',
+      '/images/muay-thai/muay-thai-03.webp'
+    ],
+    message: ''
+  },
+  {
+    // Sem foto por enquanto. Áudio veio como .ogg; convertido pro padrão dos
+    // outros com ffmpeg: silêncio das pontas cortado (areverse), passa-alta
+    // 70Hz, loudnorm -16.5 LUFS / pico -1.5 dBTP, MP3 mono 44.1kHz 96kbps.
+    // Transcrição: Whisper medium. Quando a foto chegar: WebP em
+    // public/images/claudia-kali/ e preencher `photo`.
+    name: 'Tia Claudia & Tio Kali',
+    audio: '/audio/mensagem-claudia-kali.mp3',
+    message: claudiaKaliSegments.map(s => s.text).join(' '),
+    transcriptSegments: claudiaKaliSegments
+  },
+  {
+    // Sem foto por enquanto. Áudio veio como .ogg; convertido pro padrão dos
+    // outros com ffmpeg: silêncio das pontas cortado (areverse), passa-alta
+    // 70Hz, loudnorm -16.5 LUFS / pico -1.5 dBTP, MP3 mono 44.1kHz 96kbps.
+    // Transcrição: Whisper medium. Quando a foto chegar: WebP em
+    // public/images/gabi/ e preencher `photo`.
+    name: 'Gabi, Cunhada',
+    audio: '/audio/mensagem-gabi.mp3',
+    message: gabiSegments.map(s => s.text).join(' '),
+    transcriptSegments: gabiSegments
+  },
+  {
+    // Foto de infância (WhatsApp) em WebP (sharp: rotate por EXIF, resize
+    // inside 1500px, quality 82 — mesmo tratamento dos outros), sem corte.
+    // Áudio veio como .wav; convertido pro padrão dos outros com ffmpeg:
+    // silêncio das pontas cortado (areverse), passa-alta 70Hz, loudnorm
+    // -16.5 LUFS / pico -1.5 dBTP, MP3 mono 44.1kHz 96kbps. Transcrição:
+    // Whisper medium.
+    name: 'Ronaldinho, Primo',
+    photo: '/images/ronaldinho/ronaldinho-01.webp',
+    audio: '/audio/mensagem-ronaldinho.mp3',
+    message: ronaldinhoSegments.map(s => s.text).join(' '),
+    transcriptSegments: ronaldinhoSegments
+  },
+  {
+    // Sem foto por enquanto. Áudio veio como .ogg; convertido pro padrão dos
+    // outros com ffmpeg: silêncio das pontas cortado (areverse), passa-alta
+    // 70Hz, loudnorm -16.5 LUFS / pico -1.5 dBTP, MP3 mono 44.1kHz 96kbps.
+    // Transcrição: Whisper medium. Quando a foto chegar: WebP em
+    // public/images/tio-gu/ e preencher `photo`.
+    name: 'Tio Gu',
+    audio: '/audio/mensagem-tio-gu.mp3',
+    message: tioGuSegments.map(s => s.text).join(' '),
+    transcriptSegments: tioGuSegments
+  },
+  {
+    // Sem foto por enquanto. Áudio veio como .mp3; convertido pro padrão dos
+    // outros com ffmpeg: silêncio das pontas cortado (areverse), passa-alta
+    // 70Hz, loudnorm -16.5 LUFS / pico -1.5 dBTP, MP3 mono 44.1kHz 96kbps.
+    // Transcrição: Whisper medium. Quando a foto chegar: WebP em
+    // public/images/vo-regina/ e preencher `photo`.
+    name: 'Vó Regina',
+    audio: '/audio/mensagem-vo-regina.mp3',
+    message: voReginaSegments.map(s => s.text).join(' '),
+    transcriptSegments: voReginaSegments
+  },
+  {
+    // Sem foto por enquanto. Áudio veio como .ogg; convertido pro padrão dos
+    // outros com ffmpeg: silêncio das pontas cortado (areverse), passa-alta
+    // 70Hz, loudnorm -16.5 LUFS / pico -1.5 dBTP, MP3 mono 44.1kHz 96kbps.
+    // Transcrição: Whisper medium. Quando a foto chegar: WebP em
+    // public/images/tia-selma/ e preencher `photo`.
+    name: 'Tia Selma',
+    audio: '/audio/mensagem-tia-selma.mp3',
+    message: tiaSelmaSegments.map(s => s.text).join(' '),
+    transcriptSegments: tiaSelmaSegments
+  },
+  {
+    // Sem foto por enquanto. Áudio veio como .ogg; convertido pro padrão dos
+    // outros com ffmpeg: silêncio das pontas cortado (areverse), passa-alta
+    // 70Hz, loudnorm -16.5 LUFS / pico -1.5 dBTP, MP3 mono 44.1kHz 96kbps.
+    // Transcrição: Whisper medium. Quando a foto chegar: WebP em
+    // public/images/tio-ronaldo/ e preencher `photo`.
+    name: 'Tio Ronaldo',
+    audio: '/audio/mensagem-tio-ronaldo.mp3',
+    message: tioRonaldoSegments.map(s => s.text).join(' '),
+    transcriptSegments: tioRonaldoSegments
+  },
+  {
+    // Fotos WhatsApp em WebP (sharp: rotate por EXIF, resize inside 1500px,
+    // quality 82 — mesmo tratamento dos outros), sem corte. joao-gabriel-01
+    // = capa. Áudio veio como .ogg; convertido pro padrão dos outros com
+    // ffmpeg: silêncio das pontas cortado (areverse), passa-alta 70Hz,
+    // loudnorm -16.5 LUFS / pico -1.5 dBTP, MP3 mono 44.1kHz 96kbps.
+    // Transcrição: Whisper medium.
+    name: 'João Gabriel, Naipe Hom',
+    photo: '/images/joao-gabriel/joao-gabriel-01.webp',
+    photos: Array.from({ length: 5 }, (_, i) => `/images/joao-gabriel/joao-gabriel-${String(i + 1).padStart(2, '0')}.webp`),
+    audio: '/audio/mensagem-joao-gabriel.mp3',
+    message: joaoGabrielSegments.map(s => s.text).join(' '),
+    transcriptSegments: joaoGabrielSegments
   }
 ]
 
