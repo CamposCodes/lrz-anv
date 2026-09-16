@@ -5,6 +5,55 @@
            central. Acende piscando na entrada (lâmpada ligando) e fica acesa. -->
       <div ref="safelightEl" class="safelight pointer-events-none absolute inset-0 opacity-0" />
 
+      <!-- Duas vozes, uma seção só (ex.: "Tia Selma & Tio Ronaldo"): SEM
+           cartão de foto — nenhuma pilha, nenhum carrossel, nenhum arrasto.
+           Layout dedicado: nome+player+transcrição de cada voz lado a lado
+           no desktop (sm:flex-row), empilhados no mobile com respiro (gap-10
+           + min-h reservado na transcrição de cada bloco) suficiente pra um
+           nunca cobrir o outro, mesmo com os dois tocando/trocando de trecho
+           ao mesmo tempo. Entrada simples (fade+leve subida, ver onMounted),
+           sem a coreografia de chuva/pilhas que não faz sentido sem foto. -->
+      <div
+        v-if="contributor.voices?.length"
+        class="absolute inset-x-6 inset-y-16 z-10 flex items-center justify-center overflow-y-auto sm:inset-x-10 sm:inset-y-10"
+      >
+        <!-- inset-y (não h-full + top-1/2/-translate-y-1/2 fixo) + overflow-y-auto
+             no pai: o bloco ainda nasce centralizado quando cabe (caso comum —
+             mensagens curtas), mas se as DUAS transcrições ficarem longas ao
+             mesmo tempo numa tela baixa, rola dentro da própria seção em vez
+             de estourar por baixo da viewport (cortando o segundo bloco, sem
+             como alcançá-lo — bug medido: 492px de conteúdo centralizado numa
+             tela de 732px de altura invadia ~127px além do rodapé). Tamanhos
+             menores no mobile (text-4xl/gap-6/min-h-[3.5em] em vez de
+             text-5xl/gap-10/min-h-[4.6em]) reduzem a MESMA conta pra caber
+             sem scroll no caso comum; sm:* volta aos tamanhos maiores porque
+             o desktop já testou caber lado a lado (ver captura). -->
+        <div
+          ref="voicesEl"
+          class="flex w-full flex-col items-center gap-6 opacity-0 sm:flex-row sm:items-start sm:justify-center sm:gap-16"
+        >
+          <div v-for="(voice, i) in contributor.voices" :key="voice.name" class="flex w-full max-w-sm shrink-0 flex-col items-center text-center">
+            <h3
+              class="mb-2 break-words font-script text-4xl leading-none sm:mb-4 sm:text-7xl"
+              style="color: var(--primary); text-shadow: -2px -2px 3px #000, 2px -2px 3px #000, -2px 2px 3px #000, 2px 2px 3px #000, 0 0 3px #000, 0 6px 18px rgba(0,0,0,0.95)"
+            >
+              {{ voice.name }}
+            </h3>
+            <AudioMessagePlayer class="w-full" :src="voice.audio" @timeupdate="(t) => onVoiceAudioTime(i, t)" />
+            <Transition name="caption-swap" mode="out-in">
+              <p
+                v-if="voiceDisplayedMessage(voice, i)"
+                :key="voiceDisplayedMessage(voice, i)"
+                class="relative mt-3 min-h-[3.5em] w-full break-words font-instrument-serif text-xl leading-[1.15] tracking-tight text-white sm:mt-5 sm:min-h-[4.6em] sm:text-3xl"
+              >
+                {{ voiceDisplayedMessage(voice, i) }}
+              </p>
+            </Transition>
+          </div>
+        </div>
+      </div>
+
+      <template v-else>
       <!-- Entrada alterna por seção (ENTRANCES): chuva de letras "recorte de
            revista", cópias passando ou confete caindo. Letras e confete são
            peças `absolute` com x/y própria via GSAP (setupScene), não flex/gap —
@@ -354,6 +403,7 @@
           </p>
         </Transition>
       </div>
+      </template>
     </div>
 
     <!-- Foto em tela cheia: a cópia central maior, na moldura e proporção real
@@ -530,6 +580,32 @@ function onAudioTime(t: number) {
   audioTime.value = t
 }
 
+// Seção de duas vozes (ex.: "Tia Selma & Tio Ronaldo"): cada `voice` tem seu
+// próprio player e progresso, tocando/pausando independente (useAudioPlayer
+// já garante que só um áudio da página toca por vez). Um `audioTime` por
+// índice em vez de um só — sem isso, tocar a segunda voz reaproveitaria o
+// tempo da primeira e a legenda dela mostraria o trecho errado.
+const voiceAudioTimes = ref<number[]>(props.contributor.voices?.map(() => 0) ?? [])
+
+function onVoiceAudioTime(i: number, t: number) {
+  voiceAudioTimes.value[i] = t
+}
+
+// Mesma lógica de `activeSegmentText` acima, parametrizada por voz: mantém
+// mostrando o ÚLTIMO segmento que já começou (nunca pula pro fim do áudio
+// nos gaps entre falas).
+function voiceDisplayedMessage(voice: NonNullable<Contributor['voices']>[number], i: number): string {
+  const segments = voice.transcriptSegments
+  if (!segments?.length) return voice.message
+  const t = voiceAudioTimes.value[i] ?? 0
+  let candidate = segments[0]!
+  for (const segment of segments) {
+    if (t >= segment.start) candidate = segment
+    else break
+  }
+  return candidate.text
+}
+
 // Segmentos do Whisper têm GAPS entre um e outro (silêncio/pausa na fala) —
 // `find` por `t >= start && t < end` retorna undefined bem nesses intervalos.
 // O fallback antigo pulava direto pro ÚLTIMO segmento do áudio nesse
@@ -586,6 +662,10 @@ const travelInImgEl = ref<HTMLImageElement | null>(null)
 const travelOutEl = ref<HTMLElement | null>(null)
 const travelOutImgEl = ref<HTMLImageElement | null>(null)
 const captionEl = ref<HTMLElement | null>(null)
+// Seção de duas vozes, sem foto (ver template) — entrada própria e simples
+// no onMounted, não passa por setupScene (que é toda escrita em cima de
+// pilhas/cartão central que essa seção não tem).
+const voicesEl = ref<HTMLElement | null>(null)
 
 // Chuva de letras "recorte de revista" (mesma linguagem do Cover) que cai antes
 // das fotos aparecerem — eco do Cover se dispersando, não caracteres aleatórios
@@ -751,6 +831,28 @@ let ctx: { revert: () => void } | null = null
 
 onMounted(() => {
   if (!$gsap || !sectionEl.value) return
+  if (props.contributor.voices?.length) {
+    if (!voicesEl.value) return
+    if ($prefersReducedMotion?.()) {
+      $gsap.set(voicesEl.value, { opacity: 1 })
+      return
+    }
+    ctx = $gsap.context(() => {
+      $gsap.set(voicesEl.value, { y: 16 })
+      $gsap.to(voicesEl.value, {
+        opacity: 1,
+        y: 0,
+        duration: 0.6,
+        ease: 'power2.out',
+        scrollTrigger: {
+          trigger: sectionEl.value,
+          start: 'top 2px',
+          toggleActions: 'play reverse play reverse'
+        }
+      })
+    }, sectionEl.value)
+    return
+  }
   ctx = $gsap.context(setupScene, sectionEl.value)
 })
 

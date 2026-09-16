@@ -15,6 +15,18 @@ export interface ContributorPhotoVideo {
   height: number
 }
 
+// Mais de uma pessoa gravou separado, mas divide a mesma seção/tela (ex.:
+// "Tia Selma & Tio Ronaldo") — cada uma com seu próprio player e legenda,
+// tocando/pausando de forma independente (useAudioPlayer já garante que só
+// um áudio da página toca por vez). Usado no lugar de `audio`/`message`
+// únicos quando a seção é de duas pessoas, não uma.
+export interface ContributorVoice {
+  name: string
+  audio: string
+  message: string
+  transcriptSegments?: TranscriptSegment[]
+}
+
 export interface Contributor {
   name: string
   // Foto "de perfil" — usada no cartão central/pilhas do ContributorSection.
@@ -44,4 +56,9 @@ export interface Contributor {
   // Trechos com timestamp (gerados por scripts/transcribe.mjs) — quando presentes,
   // o player troca o texto exibido por eles em vez de mostrar `message` fixo.
   transcriptSegments?: TranscriptSegment[]
+  // Duas (ou mais) pessoas na mesma seção, cada uma com seu áudio/legenda
+  // própria — usado NO LUGAR de `audio`/`message`/`transcriptSegments`
+  // únicos (ver ContributorVoice). `message` continua '' nesse caso: não há
+  // uma mensagem central pra virar a foto e ler.
+  voices?: ContributorVoice[]
 }
