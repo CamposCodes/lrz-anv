@@ -1,5 +1,6 @@
 import type { Contributor } from '@/types'
 import maeSegments from './transcripts/mensagem-mae.json'
+import arthurDmaSegments from './transcripts/mensagem-arthur-dma.json'
 import paiSegments from './transcripts/mensagem-pai.json'
 import vitorSegments from './transcripts/mensagem-vitor.json'
 import daviSegments from './transcripts/mensagem-davi.json'
@@ -185,10 +186,12 @@ const rawContributors: Contributor[] = [
     transcriptSegments: bruninhoSegments
   },
   {
-    // Sem foto por enquanto. WAV original saturado (pico 0 dBFS) — a
-    // normalização trouxe o pico pra -0.6 dB. Mesmo formato e processo do
-    // Bruninho. Quando a foto chegar: public/images/vo-malu/ e preencher `photo`.
+    // Foto antiga (infância do Lorenzo) em WebP (sharp: rotate por EXIF,
+    // resize inside 1500px, quality 82 — mesmo tratamento dos outros), sem
+    // corte. WAV original saturado (pico 0 dBFS) — a normalização trouxe o
+    // pico pra -0.6 dB. Mesmo formato e processo do Bruninho.
     name: 'Vó Malu',
+    photo: '/images/vo-malu/vo-malu-01.webp',
     audio: '/audio/mensagem-vo-malu.mp3',
     message: voMaluSegments.map(s => s.text).join(' '),
     transcriptSegments: voMaluSegments
@@ -269,15 +272,21 @@ const rawContributors: Contributor[] = [
     // (nome próprio).
     name: 'Licurci MC',
     photo: '/images/degrau/degrau-show-01.webp',
-    photos: Array.from({ length: 3 }, (_, i) => `/images/degrau/degrau-show-${String(i + 1).padStart(2, '0')}.webp`),
+    photos: Array.from({ length: 6 }, (_, i) => `/images/degrau/degrau-show-${String(i + 1).padStart(2, '0')}.webp`),
     audio: '/audio/mensagem-licurci.mp3',
     message: licurciSegments.map(s => s.text).join(' '),
     transcriptSegments: licurciSegments
   },
   {
-    // Foto única (WhatsApp) na proporção original (9:16), sem corte.
+    // Foto original (davi-01) na proporção 9:16, sem corte; davi-02/03
+    // chegaram depois, foto de grupo no bar.
     name: 'Davi Dooup',
     photo: '/images/davi/davi-01.webp',
+    photos: [
+      '/images/davi/davi-01.webp',
+      '/images/davi/davi-02.webp',
+      '/images/davi/davi-03.webp'
+    ],
     audio: '/audio/mensagem-davi.mp3',
     message: daviSegments.map(s => s.text).join(' '),
     transcriptSegments: daviSegments
@@ -291,7 +300,7 @@ const rawContributors: Contributor[] = [
     // Capa = quadro de 74s em WebP. Transcrição: WHISPER_MODEL=medium
     // node scripts/transcribe.mjs public/video/mensagem-arthur-dexis.mp4.
     name: 'Arthur Dexis',
-    photo: '/images/arthur-dexis/arthur-dexis-01.webp',
+    photo: '/images/arthur-dexis/arthur-dexis-02.webp',
     video: {
       h264: '/video/mensagem-arthur-dexis.mp4',
       av1: '/video/mensagem-arthur-dexis.av1.mp4',
@@ -313,7 +322,9 @@ const rawContributors: Contributor[] = [
     photo: '/images/bkp/bkp-01.webp',
     photos: [
       '/images/bkp/bkp-01.webp',
-      '/images/bkp/bkp-02.webp'
+      '/images/bkp/bkp-02.webp',
+      '/images/bkp/bkp-03.webp',
+      '/images/bkp/bkp-04.webp'
     ],
     audio: '/audio/mensagem-bkp.mp3',
     message: bkpSegments.map(s => s.text).join(' '),
@@ -348,7 +359,7 @@ const rawContributors: Contributor[] = [
     // "Lorena"→"Lorenzo".
     name: 'João Ricardo, Cotto',
     photo: '/images/joao-ricardo/joao-ricardo-01.webp',
-    photos: Array.from({ length: 6 }, (_, i) => `/images/joao-ricardo/joao-ricardo-${String(i + 1).padStart(2, '0')}.webp`),
+    photos: Array.from({ length: 7 }, (_, i) => `/images/joao-ricardo/joao-ricardo-${String(i + 1).padStart(2, '0')}.webp`),
     audio: '/audio/mensagem-joao-ricardo.mp3',
     message: joaoRicardoSegments.map(s => s.text).join(' '),
     transcriptSegments: joaoRicardoSegments
@@ -401,18 +412,19 @@ const rawContributors: Contributor[] = [
   {
     // Fotos WhatsApp em WebP (sharp: rotate por EXIF, resize inside 1500px,
     // quality 82 — mesmo tratamento dos outros), sem corte. arthur-dma-02
-    // (foto nítida, os dois sorrindo) = capa. Áudio ainda não chegou: quando
-    // chegar, salvar em public/audio/mensagem-arthur-dma.mp3 (mesmo processo
-    // dos outros: ffmpeg trim de silêncio + passa-alta 70Hz + loudnorm -16.5
-    // LUFS/-1.5 dBTP + MP3 mono 44.1kHz 96kbps), rodar scripts/transcribe.mjs
-    // e preencher audio/message/transcriptSegments.
+    // (foto nítida, os dois sorrindo) = capa. Áudio veio como .ogg;
+    // convertido pro padrão dos outros com ffmpeg: silêncio das pontas
+    // cortado (areverse), passa-alta 70Hz, loudnorm -16.5 LUFS / pico
+    // -1.5 dBTP, MP3 mono 44.1kHz 96kbps. Transcrição: Whisper medium.
     name: 'Arthur DMA',
     photo: '/images/arthur-dma/arthur-dma-02.webp',
     photos: [
       '/images/arthur-dma/arthur-dma-02.webp',
       '/images/arthur-dma/arthur-dma-01.webp'
     ],
-    message: ''
+    audio: '/audio/mensagem-arthur-dma.mp3',
+    message: arthurDmaSegments.map(s => s.text).join(' '),
+    transcriptSegments: arthurDmaSegments
   },
   {
     // Time de Muay Thai (foto em grupo). Fotos WhatsApp em WebP (sharp:
@@ -436,21 +448,35 @@ const rawContributors: Contributor[] = [
     // Transcrição: Whisper medium.
     name: 'João Gabriel, Naipe Hom',
     photo: '/images/joao-gabriel/joao-gabriel-01.webp',
-    photos: Array.from({ length: 5 }, (_, i) => `/images/joao-gabriel/joao-gabriel-${String(i + 1).padStart(2, '0')}.webp`),
+    photos: Array.from({ length: 6 }, (_, i) => `/images/joao-gabriel/joao-gabriel-${String(i + 1).padStart(2, '0')}.webp`),
     audio: '/audio/mensagem-joao-gabriel.mp3',
     message: joaoGabrielSegments.map(s => s.text).join(' '),
     transcriptSegments: joaoGabrielSegments
   },
   {
     // Fotos WhatsApp em WebP (sharp: rotate por EXIF, resize inside 1500px,
-    // quality 82 — mesmo tratamento dos outros), sem corte. gabriel-campos-01
-    // (os dois na cozinha) = capa. Sem áudio ainda: quando chegar, mesmo
-    // processo dos demais (ffmpeg trim de silêncio + passa-alta 70Hz +
-    // loudnorm -16.5 LUFS/-1.5 dBTP + MP3 mono 44.1kHz 96kbps), rodar
+    // quality 82 — mesmo tratamento dos outros), sem corte. gabriel-campos-03
+    // (os dois de branco) = capa, primeiro na lista pra pilha começar
+    // exatamente nela. Sem áudio ainda: quando chegar, mesmo processo dos
+    // demais (ffmpeg trim de silêncio + passa-alta 70Hz + loudnorm
+    // -16.5 LUFS/-1.5 dBTP + MP3 mono 44.1kHz 96kbps), rodar
     // scripts/transcribe.mjs e preencher audio/message/transcriptSegments.
     name: 'Gabriel, Campos',
-    photo: '/images/gabriel-campos/gabriel-campos-01.webp',
-    photos: Array.from({ length: 4 }, (_, i) => `/images/gabriel-campos/gabriel-campos-${String(i + 1).padStart(2, '0')}.webp`),
+    photo: '/images/gabriel-campos/gabriel-campos-03.webp',
+    photos: [
+      '/images/gabriel-campos/gabriel-campos-03.webp',
+      '/images/gabriel-campos/gabriel-campos-01.webp',
+      '/images/gabriel-campos/gabriel-campos-02.webp',
+      '/images/gabriel-campos/gabriel-campos-04.webp',
+      '/images/gabriel-campos/gabriel-campos-05.webp',
+      '/images/gabriel-campos/gabriel-campos-06.webp',
+      '/images/gabriel-campos/gabriel-campos-07.webp',
+      '/images/gabriel-campos/gabriel-campos-08.webp',
+      '/images/gabriel-campos/gabriel-campos-09.webp',
+      '/images/gabriel-campos/gabriel-campos-10.webp',
+      '/images/gabriel-campos/gabriel-campos-11.webp',
+      '/images/gabriel-campos/gabriel-campos-12.webp'
+    ],
     message: ''
   }
 ]
