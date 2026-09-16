@@ -468,7 +468,6 @@ const rawContributors: Contributor[] = [
       '/images/gabriel-campos/gabriel-campos-01.webp',
       '/images/gabriel-campos/gabriel-campos-02.webp',
       '/images/gabriel-campos/gabriel-campos-04.webp',
-      '/images/gabriel-campos/gabriel-campos-05.webp',
       '/images/gabriel-campos/gabriel-campos-06.webp',
       '/images/gabriel-campos/gabriel-campos-07.webp',
       '/images/gabriel-campos/gabriel-campos-08.webp',

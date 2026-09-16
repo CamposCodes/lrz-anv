@@ -53,6 +53,38 @@
         </div>
       </div>
 
+      <!-- Sem foto nenhuma (ex.: "Vó Regina", "Tia Claudia & Tio Kali"): o
+           papel em branco com o nome (ver bloco de foto no v-else) ficava
+           redundante — o nome já aparece na legenda de qualquer forma, então
+           mostrar ele DUAS vezes (cartão vazio + legenda) só ocupava espaço
+           à toa. Mesma solução do bloco de vozes acima (sem cartão, sem
+           pilha, sem coreografia de entrada), mas pra UMA pessoa só: nome
+           bem maior (já que é o único elemento visual central da seção) +
+           player + transcrição, tudo centralizado. -->
+      <div
+        v-else-if="!contributor.photo"
+        class="absolute inset-x-6 inset-y-16 z-10 flex items-center justify-center overflow-y-auto sm:inset-x-10 sm:inset-y-10"
+      >
+        <div ref="voicesEl" class="flex w-full max-w-md flex-col items-center gap-5 text-center opacity-0">
+          <h3
+            class="break-words font-script text-6xl leading-none sm:text-9xl"
+            style="color: var(--primary); text-shadow: -2px -2px 3px #000, 2px -2px 3px #000, -2px 2px 3px #000, 2px 2px 3px #000, 0 0 3px #000, 0 6px 18px rgba(0,0,0,0.95)"
+          >
+            {{ contributor.name }}
+          </h3>
+          <AudioMessagePlayer v-if="contributor.audio" class="w-full" :src="contributor.audio" @timeupdate="onAudioTime" />
+          <Transition name="caption-swap" mode="out-in">
+            <p
+              v-if="displayedMessage"
+              :key="displayedMessage"
+              class="relative min-h-[4.6em] w-full break-words font-instrument-serif text-2xl leading-[1.15] tracking-tight text-white sm:text-3xl"
+            >
+              {{ displayedMessage }}
+            </p>
+          </Transition>
+        </div>
+      </div>
+
       <template v-else>
       <!-- Entrada alterna por seção (ENTRANCES): chuva de letras "recorte de
            revista", cópias passando ou confete caindo. Letras e confete são
@@ -662,9 +694,10 @@ const travelInImgEl = ref<HTMLImageElement | null>(null)
 const travelOutEl = ref<HTMLElement | null>(null)
 const travelOutImgEl = ref<HTMLImageElement | null>(null)
 const captionEl = ref<HTMLElement | null>(null)
-// Seção de duas vozes, sem foto (ver template) — entrada própria e simples
-// no onMounted, não passa por setupScene (que é toda escrita em cima de
-// pilhas/cartão central que essa seção não tem).
+// Ref compartilhada pelos dois layouts sem cartão de foto (duas vozes OU uma
+// pessoa sem `photo`, ver template — nunca os dois ao mesmo tempo): entrada
+// própria e simples no onMounted, não passa por setupScene (que é toda
+// escrita em cima de pilhas/cartão central que essas seções não têm).
 const voicesEl = ref<HTMLElement | null>(null)
 
 // Chuva de letras "recorte de revista" (mesma linguagem do Cover) que cai antes
@@ -831,7 +864,7 @@ let ctx: { revert: () => void } | null = null
 
 onMounted(() => {
   if (!$gsap || !sectionEl.value) return
-  if (props.contributor.voices?.length) {
+  if (props.contributor.voices?.length || !props.contributor.photo) {
     if (!voicesEl.value) return
     if ($prefersReducedMotion?.()) {
       $gsap.set(voicesEl.value, { opacity: 1 })
