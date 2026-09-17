@@ -328,6 +328,18 @@ const rawContributors: Contributor[] = [
     transcriptSegments: brenoSegments
   },
   {
+    // Foto WhatsApp em WebP (sharp: rotate por EXIF, resize inside 1500px,
+    // quality 82 — mesmo tratamento dos outros), sem corte. Áudio veio como
+    // .wav; convertido pro padrão dos outros com ffmpeg: silêncio das pontas
+    // cortado (areverse), passa-alta 70Hz, loudnorm -16.5 LUFS / pico
+    // -1.5 dBTP, MP3 mono 44.1kHz 96kbps. Transcrição: Whisper medium.
+    name: 'Babi Lino',
+    photo: '/images/babi-lino/babi-lino-01.webp',
+    audio: '/audio/mensagem-babi.mp3',
+    message: babiSegments.map(s => s.text).join(' '),
+    transcriptSegments: babiSegments
+  },
+  {
     // Fotos do show, WebP (sharp: rotate por EXIF, resize inside 1500px,
     // quality 82 — mesmo tratamento de restore-original-photos.mjs), sem
     // corte. degrau-show-01 = capa. Áudio convertido do .ogg com ffmpeg:
@@ -335,8 +347,10 @@ const rawContributors: Contributor[] = [
     // silenceremove trunca no meio numa pausa de fala), passa-alta 70Hz,
     // loudnorm -16.5 LUFS / pico -1.5 dBTP, MP3 mono 44.1kHz 96kbps (mesmo
     // formato dos outros). Transcrição do Whisper; corrigido "Licurse"→"Licurci"
-    // (nome próprio).
-    name: 'Licurci MC',
+    // (nome próprio). Nome completo (João Paulo) some do menu de navegação —
+    // splitName (NavMenu.vue) mostra só o antes da vírgula em destaque, o
+    // resto como subtítulo, igual "Vitor, Irmão"/"Gabriel, Campos".
+    name: 'Licurci, João Paulo',
     photo: '/images/degrau/degrau-show-01.webp',
     photos: Array.from({ length: 6 }, (_, i) => `/images/degrau/degrau-show-${String(i + 1).padStart(2, '0')}.webp`),
     audio: '/audio/mensagem-licurci.mp3',
@@ -363,21 +377,22 @@ const rawContributors: Contributor[] = [
     // normalizado (-16.5 LUFS, passa-alta 70Hz), MP4 com faststart. Duas
     // versões: AV1 (7.6MB, navegadores modernos) e H.264 High (14.5MB,
     // reserva universal) — mesma qualidade (SSIM ~0.985 contra o original).
-    // Capa = quadro de 74s em WebP. Transcrição: WHISPER_MODEL=medium
-    // node scripts/transcribe.mjs public/video/mensagem-arthur-dexis.mp4.
+    // Transcrição: WHISPER_MODEL=medium node scripts/transcribe.mjs
+    // public/video/mensagem-arthur-dexis.mp4.
     name: 'Arthur Dexis',
-    photo: '/images/arthur-dexis/arthur-dexis-02.webp',
+    // Capa = arthur-dexis-01 (576x1024, MESMA proporção 9:16 do vídeo —
+    // arthur-dexis-02, usado antes, é uma foto solta 1500x843 (paisagem);
+    // como poster ela distorcia a caixa do vídeo antes do play — via
+    // posterRatio (ver ContributorSection.vue), a caixa nascia deitada e
+    // "esticava" na hora de tocar, em vez de já nascer no formato 9:16 real).
+    photo: '/images/arthur-dexis/arthur-dexis-01.webp',
     // photos: vídeo (mesma foto de `photo`, identifica o slot do vídeo — ver
-    // ContributorSection.vue) + foto lateral avulsa, pro carrossel/pilha
-    // lateral funcionar igual às outras seções sem tirar o vídeo do centro.
-    // Pilha lateral repete a mesma foto do print (arthur-dexis-02, pedido
-    // explícito — arthur-dexis-01 com o rosto não aparece mais). `?side` no
-    // segundo item é só pra não bater na comparação por string igual a
-    // `photo` em photoPool (ContributorSection.vue) — sem isso o item viraria
-    // outro slot de vídeo em vez de foto normal. Mesmo arquivo, mesmo byte.
+    // ContributorSection.vue) + arthur-dexis-02 como foto lateral avulsa, pro
+    // carrossel/pilha lateral funcionar igual às outras seções sem tirar o
+    // vídeo do centro.
     photos: [
-      '/images/arthur-dexis/arthur-dexis-02.webp',
-      '/images/arthur-dexis/arthur-dexis-02.webp?side'
+      '/images/arthur-dexis/arthur-dexis-01.webp',
+      '/images/arthur-dexis/arthur-dexis-02.webp'
     ],
     video: {
       h264: '/video/mensagem-arthur-dexis.mp4',
@@ -415,7 +430,8 @@ const rawContributors: Contributor[] = [
     // sharp .trim() antes do resize. Áudio veio como .ogg; convertido pro
     // padrão dos outros com ffmpeg: silêncio das pontas cortado (areverse),
     // passa-alta 70Hz, loudnorm -16.5 LUFS / pico -1.5 dBTP, MP3 mono
-    // 44.1kHz 96kbps. Transcrição: Whisper medium.
+    // 44.1kHz 96kbps. Transcrição: Whisper medium; corrigido "dinheiro no
+    // bom"→"dinheiro no bolso" (erro de reconhecimento, não da fala).
     name: 'Gabriel Vassoura',
     photo: '/images/gabriel-vassoura/gabriel-vassoura-01.webp',
     photos: [
@@ -437,13 +453,12 @@ const rawContributors: Contributor[] = [
     // scripts/transcribe.mjs public/audio/mensagem-gabriel-campos.mp3;
     // corrigido "alicece"→"alicerce" (erro de reconhecimento, não da fala).
     name: 'Gabriel, Campos',
-    photo: '/images/gabriel-campos/gabriel-campos-03.webp',
-    // gabriel-campos-06 (os três com sinal de rock) adiantada pra logo depois
-    // da capa (pedido explícito). gabriel-campos-07 (grupo na rua à noite)
-    // removida.
+    photo: '/images/gabriel-campos/gabriel-campos-06.webp',
+    // gabriel-campos-06 (os três com sinal de rock) vira a nova capa (pedido
+    // explícito). gabriel-campos-07 (grupo na rua à noite) removida.
     photos: [
-      '/images/gabriel-campos/gabriel-campos-03.webp',
       '/images/gabriel-campos/gabriel-campos-06.webp',
+      '/images/gabriel-campos/gabriel-campos-03.webp',
       '/images/gabriel-campos/gabriel-campos-01.webp',
       '/images/gabriel-campos/gabriel-campos-02.webp',
       '/images/gabriel-campos/gabriel-campos-04.webp',
@@ -474,18 +489,6 @@ const rawContributors: Contributor[] = [
     transcriptSegments: joaoRicardoSegments
   },
   {
-    // Foto WhatsApp em WebP (sharp: rotate por EXIF, resize inside 1500px,
-    // quality 82 — mesmo tratamento dos outros), sem corte. Áudio veio como
-    // .wav; convertido pro padrão dos outros com ffmpeg: silêncio das pontas
-    // cortado (areverse), passa-alta 70Hz, loudnorm -16.5 LUFS / pico
-    // -1.5 dBTP, MP3 mono 44.1kHz 96kbps. Transcrição: Whisper medium.
-    name: 'Babi Lino',
-    photo: '/images/babi-lino/babi-lino-01.webp',
-    audio: '/audio/mensagem-babi.mp3',
-    message: babiSegments.map(s => s.text).join(' '),
-    transcriptSegments: babiSegments
-  },
-  {
     // Fotos WhatsApp em WebP (sharp: rotate por EXIF, resize inside 1500px,
     // quality 82 — mesmo tratamento dos outros), sem corte. arthur-dma-02
     // (foto nítida, os dois sorrindo) = capa. Áudio veio como .ogg;
@@ -503,19 +506,6 @@ const rawContributors: Contributor[] = [
     transcriptSegments: arthurDmaSegments
   },
   {
-    // Time de Muay Thai (foto em grupo). Fotos WhatsApp em WebP (sharp:
-    // rotate por EXIF, resize inside 1500px, quality 82 — mesmo tratamento
-    // dos outros), sem corte. Sem áudio (mensagem coletiva, só fotos).
-    name: 'Muay Thai',
-    photo: '/images/muay-thai/muay-thai-01.webp',
-    photos: [
-      '/images/muay-thai/muay-thai-01.webp',
-      '/images/muay-thai/muay-thai-02.webp',
-      '/images/muay-thai/muay-thai-03.webp'
-    ],
-    message: ''
-  },
-  {
     // Fotos WhatsApp em WebP (sharp: rotate por EXIF, resize inside 1500px,
     // quality 82 — mesmo tratamento dos outros), sem corte. joao-gabriel-01
     // = capa. Áudio veio como .ogg; convertido pro padrão dos outros com
@@ -528,6 +518,20 @@ const rawContributors: Contributor[] = [
     audio: '/audio/mensagem-joao-gabriel.mp3',
     message: joaoGabrielSegments.map(s => s.text).join(' '),
     transcriptSegments: joaoGabrielSegments
+  },
+  {
+    // Time de Muay Thai (foto em grupo). Fotos WhatsApp em WebP (sharp:
+    // rotate por EXIF, resize inside 1500px, quality 82 — mesmo tratamento
+    // dos outros), sem corte. Sem áudio (mensagem coletiva, só fotos). Por
+    // último na ordem (pedido explícito).
+    name: 'Muay Thai',
+    photo: '/images/muay-thai/muay-thai-01.webp',
+    photos: [
+      '/images/muay-thai/muay-thai-01.webp',
+      '/images/muay-thai/muay-thai-02.webp',
+      '/images/muay-thai/muay-thai-03.webp'
+    ],
+    message: ''
   }
 ]
 
