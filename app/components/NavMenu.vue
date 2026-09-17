@@ -91,10 +91,16 @@ function close() {
 
 // Fecha e só então rola: com overflow ainda travado (documentElement.style.overflow
 // = 'hidden' em openMenu) o scrollIntoView não move a página de verdade.
+// behavior:'instant' é proposital, não só um default esquecido: com
+// scroll-snap-stop:always em toda .scroll-scene (tailwind.css), um scrollIntoView
+// 'smooth' (explícito ou herdado do scroll-behavior:smooth do CSS) que precise
+// atravessar várias seções trava e não rola NADA — o Chrome parece desistir da
+// animação inteira em vez de passar por cada stop. 'instant' é o único behavior
+// que rola de forma confiável nessa combinação.
 function goTo(index: number) {
   close()
   nextTick(() => {
-    document.getElementById(`contributor-${index}`)?.scrollIntoView({ block: 'start' })
+    document.getElementById(`contributor-${index}`)?.scrollIntoView({ block: 'start', behavior: 'instant' })
   })
 }
 
