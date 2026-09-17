@@ -280,6 +280,28 @@
                 <Pause v-if="stackVideoPlaying" fill="currentColor" class="size-5" />
                 <Play v-else fill="currentColor" class="size-5 translate-x-px" />
               </button>
+
+              <!-- Dica de arrastar: só existe pra ensinar que a pilha lateral
+                   arrasta (hasCarousel) — pisca 2s assim que a entrada assenta
+                   (flashDragHint, chamado no fim da timeline) e some sozinha
+                   (dismissDragHint), inclusive na hora se o usuário arrastar
+                   antes disso (onPointerDown). pointer-events-none: nunca pode
+                   roubar o próprio gesto de arrasto que está ensinando. Mesma
+                   técnica de overlay ancorado no `--frame` do botão de vídeo
+                   acima, mas centralizada e sobre o RODAPÉ da foto/vídeo
+                   inteiro, não um canto — é o par de setas indo e voltando
+                   que faz de conta ser arrastado, sem precisar ilustração
+                   nenhuma. -->
+              <div
+                v-if="hasCarousel"
+                class="pointer-events-none absolute inset-x-0 bottom-[calc(var(--frame)+0.6rem)] z-10 flex justify-center transition-opacity duration-700 motion-reduce:transition-none"
+                :class="showDragHint ? 'opacity-100' : 'opacity-0'"
+              >
+                <span class="drag-hint-pill flex items-center gap-1.5 rounded-full bg-black/45 px-3 py-1.5 text-xs tracking-wide text-white/90 backdrop-blur-sm">
+                  <ChevronsLeftRight class="size-3.5 shrink-0" />
+                  arraste para ver mais fotos
+                </span>
+              </div>
             </div>
             <!-- Verso: mesma caixa, pré-girado 180° (estático) — só aparece
                  quando o pai (photoCardEl) gira e o backface-visibility do
@@ -530,7 +552,7 @@
 </template>
 
 <script setup lang="ts">
-import { RotateCcw, X, Play, Pause } from '@lucide/vue'
+import { RotateCcw, X, Play, Pause, ChevronsLeftRight } from '@lucide/vue'
 import type { Contributor } from '@/types'
 import { carouselWindow, step, wrapIndex } from '@/utils/carousel'
 
@@ -1243,6 +1265,7 @@ function setupScene() {
     .to(captionEl.value, { opacity: 1, y: 0, duration: 0.6, ease: 'power2.out' }, `form+=${FORM_STAGGER * 4 + 0.3}`)
     // Arrasto liberado só com tudo pousado (fim da timeline); no reverse volta a 'none'.
     .set(photoStageEl.value, { pointerEvents: 'auto' })
+    .call(flashDragHint)
 }
 
 // Arraste de cópia na mesa: puxa o dedo/mouse, o cartão segue 1:1 com leve giro —
@@ -1274,6 +1297,29 @@ let flipTween: { kill: () => void } | null = null
 // de virar, "veja a foto" depois, o ícone servindo o tempo todo de volta.
 const showFlipHint = computed(() => !(props.contributor.audio || props.contributor.video) || audioTime.value > 0)
 const flipHintLabel = computed(() => isFlipped.value ? 'veja a foto' : 'veja o verso da foto')
+
+// Dica de arrastar (ver overlay no template, dentro do print): pisca 2s só
+// na entrada e nunca mais — diferente do flip hint acima (esse fica
+// esperando o áudio), aqui o gesto em si (arrastar) já é o "início" que
+// falta esperar. Chamada UMA vez, no fim da timeline de entrada
+// (setupScene) — não em cada troca de foto, senão reapareceria a cada
+// arremesso, brigando com o próprio dedo do usuário.
+const showDragHint = ref(false)
+let dragHintTimer: ReturnType<typeof setTimeout> | null = null
+
+function flashDragHint() {
+  if (!hasCarousel.value || $prefersReducedMotion?.()) return
+  showDragHint.value = true
+  dragHintTimer = setTimeout(() => { showDragHint.value = false }, 2000)
+}
+
+// Some na hora se o usuário começar a arrastar antes dos 2s — já entendeu o
+// gesto, não precisa mais do aviso competindo visualmente com o próprio dedo.
+function dismissDragHint() {
+  if (!showDragHint.value) return
+  if (dragHintTimer) clearTimeout(dragHintTimer)
+  showDragHint.value = false
+}
 
 function toggleFlip() {
   if (!photoCardEl.value || isDragging.value) return
@@ -1331,6 +1377,7 @@ function killPeekHover() {
 
 function onPointerDown(e: PointerEvent) {
   if (!photoCardEl.value || !photoStageEl.value || isFlipped.value) return
+  dismissDragHint()
   isDragging.value = true
   startX = e.clientX
   startY = e.clientY
@@ -1581,6 +1628,7 @@ function onPointerUp(e?: PointerEvent) {
 onBeforeUnmount(() => {
   activeTween?.kill()
   flipTween?.kill()
+  if (dragHintTimer) clearTimeout(dragHintTimer)
   ctx?.revert()
   closeLightbox()
   if (onViewportResize) window.removeEventListener('resize', onViewportResize)
@@ -1702,6 +1750,20 @@ onBeforeUnmount(() => {
   .safelight {
     background: radial-gradient(48% 70% at 50% 50%, rgba(90, 10, 8, 0.28) 0%, rgba(50, 0, 0, 0.14) 45%, transparent 80%);
   }
+}
+
+/* Dica de arrastar: deriva sutil de ida-e-volta, curta o bastante (1.1s) pra
+   caber ~2 ciclos nos 2s em que a pílula fica visível — é esse vaivém que lê
+   como "arraste", sem precisar de ilustração. prefers-reduced-motion já
+   neutraliza (regra global em tailwind.css), então nem entra no cálculo
+   aqui. */
+.drag-hint-pill {
+  animation: drag-hint-drift 1.1s ease-in-out infinite;
+}
+
+@keyframes drag-hint-drift {
+  0%, 100% { transform: translateX(-3px); }
+  50% { transform: translateX(3px); }
 }
 
 /* Flip 3D do cartão: photoCardEl (o pai) é quem recebe a
