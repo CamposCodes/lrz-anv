@@ -20,6 +20,9 @@ export default defineNuxtConfig({
         { rel: 'icon', href: '/favicon.ico', sizes: '32x32' },
         { rel: 'icon', href: '/favicon.svg', type: 'image/svg+xml' },
         { rel: 'apple-touch-icon', href: '/apple-touch-icon.png' }
+      ],
+      script: [
+        { src: '/_vercel/insights/script.js', defer: true }
       ]
     }
   },
