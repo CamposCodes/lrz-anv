@@ -28,17 +28,28 @@
           aria-label="Navegação entre mensagens"
           @click.stop
         >
-          <p class="px-1 pb-2 pt-1 text-xs uppercase tracking-wide" style="color: var(--muted-foreground)">
+          <p class="nav-menu-kicker px-2 pb-2.5 pt-1 text-[0.6875rem] uppercase tracking-[0.16em]">
             Ir direto pra mensagem de
           </p>
-          <ul ref="listEl" class="flex flex-wrap gap-2">
+          <ul ref="listEl" class="flex flex-col gap-1.5">
             <li v-for="(c, i) in contributors" :key="c.name">
               <button
                 type="button"
-                class="nav-menu-pill rounded-full border border-white/15 bg-white/5 px-4 py-2 font-script text-xl leading-none text-foreground transition-[color,background-color,border-color,transform] duration-150 hover:border-primary/60 hover:bg-primary/10 hover:text-primary"
+                class="nav-menu-pill flex w-full items-baseline justify-between gap-4 rounded-full border border-white/10 px-4 py-2.5 text-left"
                 @click="goTo(i)"
               >
-                {{ c.name }}
+                <!-- Cursiva a 1.75rem: a Luxurious Script é uma face de display,
+                     e nos 20px de antes os nomes viravam rabisco (é o que o dono
+                     do site reportou). Em linha única, de largura cheia, sobra
+                     espaço pra ela nesse tamanho. -->
+                <span class="nav-menu-name font-script text-[1.75rem] leading-none">{{ splitName(c.name)[0] }}</span>
+                <!-- O complemento (parentesco, sobrenome ou nome artístico) sai
+                     de DENTRO da cursiva e vira rótulo miúdo: não competia por
+                     atenção, só embaralhava. Não é enfeite — é o que distingue
+                     os homônimos (dois Vitor, dois Gabriel, dois Arthur). -->
+                <span v-if="splitName(c.name)[1]" class="nav-menu-qualifier shrink-0 text-[0.6875rem] uppercase tracking-[0.14em]">
+                  {{ splitName(c.name)[1] }}
+                </span>
               </button>
             </li>
           </ul>
@@ -53,6 +64,15 @@ import { Menu, X } from '@lucide/vue'
 import type { Contributor } from '@/types'
 
 defineProps<{ contributors: Contributor[] }>()
+
+// `name` guarda "Vitor, Irmão" / "Gabriel, Campos" / "João Gabriel, Naipe Hom":
+// nome e complemento numa string só. A vírgula separa os dois papéis; nomes sem
+// vírgula ("Vó Malu", "Tia Claudia & Tio Kali") não têm complemento e ocupam a
+// linha inteira.
+function splitName(name: string): [string, string?] {
+  const [primary, secondary] = name.split(',').map(s => s.trim())
+  return [primary!, secondary]
+}
 
 const open = ref(false)
 const triggerEl = ref<HTMLButtonElement | null>(null)
@@ -136,7 +156,53 @@ onBeforeUnmount(() => {
   transform: scale(0.94);
 }
 
+/* Secundário tingido do próprio dourado da marca, nunca cinza neutro: num
+   painel escuro sobre a página inteira, cinza lê como "desligado", e o dourado
+   é o único accent do projeto (ver tailwind.css). */
+.nav-menu-panel {
+  --champagne: color-mix(in srgb, var(--primary) 55%, var(--foreground));
+}
+
+.nav-menu-kicker {
+  color: color-mix(in srgb, var(--primary) 30%, var(--muted-foreground));
+}
+
+.nav-menu-pill {
+  background-color: rgb(255 255 255 / 4%);
+  color: var(--foreground);
+  /* Propriedades nomeadas, nunca `all`. transform entra porque o :active
+     escala. */
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    transform 150ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.nav-menu-qualifier {
+  color: var(--champagne);
+  transition: color 150ms ease;
+}
+
+/* Toque dispara :hover no tap e deixa o estado grudado — por isso o hover fica
+   atrás de (hover: hover) and (pointer: fine), e o dedo conta só com o :active. */
+@media (hover: hover) and (pointer: fine) {
+  .nav-menu-pill:hover {
+    background-color: color-mix(in srgb, var(--primary) 9%, transparent);
+    border-color: color-mix(in srgb, var(--primary) 45%, transparent);
+  }
+
+  .nav-menu-pill:hover .nav-menu-name {
+    color: var(--primary);
+  }
+
+  .nav-menu-pill:hover .nav-menu-qualifier {
+    color: var(--primary);
+  }
+}
+
+/* Alvo largo: 0.98 dá o "ouvi você" sem parecer elástico (0.97 num botão de
+   largura cheia já lê como sacudida). */
 .nav-menu-pill:active {
-  transform: scale(0.97);
+  transform: scale(0.98);
 }
 </style>
