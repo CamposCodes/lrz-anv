@@ -23,6 +23,7 @@ import tiaSelmaSegments from './transcripts/mensagem-tia-selma.json'
 import tioRonaldoSegments from './transcripts/mensagem-tio-ronaldo.json'
 import joaoGabrielSegments from './transcripts/mensagem-joao-gabriel.json'
 import laraSegments from './transcripts/mensagem-lara.json'
+import gabrielCamposSegments from './transcripts/mensagem-gabriel-campos.json'
 
 // Versão das fotos na URL. As fotos foram reexportadas dos originais (proporção
 // real, sem fundo borrado) mantendo os MESMOS nomes de arquivo — sem isso,
@@ -30,7 +31,7 @@ import laraSegments from './transcripts/mensagem-lara.json'
 // stale-while-revalidate) continuavam servindo as versões antigas 4:5 borradas.
 // Suba o número sempre que sobrescrever uma foto com o mesmo nome.
 const PHOTO_VERSION = 2
-const versioned = (path: string) => `${path}?v=${PHOTO_VERSION}`
+const versioned = (path: string) => path.includes('?') ? `${path}&v=${PHOTO_VERSION}` : `${path}?v=${PHOTO_VERSION}`
 
 // Conteúdo real chega via WhatsApp/Drive ao longo da semana — só editar este array,
 // nenhuma seção precisa de markup novo por pessoa.
@@ -110,12 +111,18 @@ const rawContributors: Contributor[] = [
   },
   {
     // Fotos reais (WhatsApp) na proporção original, mesmo tratamento do Pai.
-    // Sem upscale (vitor-02/10 vieram pequenas). vitor-01 = capa. vitor-16/17
-    // chegaram depois, soltas na mesma leva compartilhada com Mãe/Lucas.
-    // vitor-03 removida (pai, mãe e Vitor criança).
+    // Sem upscale (vitor-02 veio pequena). vitor-16/17 chegaram depois,
+    // soltas na mesma leva compartilhada com Mãe/Lucas. vitor-03 removida
+    // (pai, mãe e Vitor criança). vitor-07 (com o Lucas na festa) virou a
+    // nova capa. vitor-10 (os três de terno) era na verdade do Lucas —
+    // movida pra lucas-18, ver seção do Lucas.
     name: 'Vitor, Irmão',
-    photo: '/images/vitor/vitor-01.webp',
-    photos: Array.from({ length: 17 }, (_, i) => `/images/vitor/vitor-${String(i + 1).padStart(2, '0')}.webp`).filter(p => p !== '/images/vitor/vitor-03.webp'),
+    photo: '/images/vitor/vitor-07.webp',
+    photos: [
+      '/images/vitor/vitor-07.webp',
+      ...Array.from({ length: 17 }, (_, i) => `/images/vitor/vitor-${String(i + 1).padStart(2, '0')}.webp`)
+        .filter(p => !['/images/vitor/vitor-03.webp', '/images/vitor/vitor-07.webp', '/images/vitor/vitor-10.webp'].includes(p))
+    ],
     audio: '/audio/mensagem-vitor.mp3',
     message: vitorSegments.map(s => s.text).join(' '),
     transcriptSegments: vitorSegments
@@ -154,13 +161,15 @@ const rawContributors: Contributor[] = [
     // Whisper medium.
     name: 'Lucas, Primo',
     photo: '/images/lucas/lucas-11.webp',
-    // lucas-07 removida (foto antiga, camisa de guitarra).
+    // lucas-07 removida (foto antiga, camisa de guitarra). lucas-18 (os três
+    // de terno) estava na leva do Vitor por engano, veio pra cá.
     photos: [
       '/images/lucas/lucas-11.webp',
       ...Array.from({ length: 5 }, (_, i) => `/images/lucas/lucas-${String(i + 1).padStart(2, '0')}.webp`),
       '/images/lucas/lucas-12.webp',
       ...Array.from({ length: 5 }, (_, i) => `/images/lucas/lucas-${String(i + 6).padStart(2, '0')}.webp`),
-      ...Array.from({ length: 5 }, (_, i) => `/images/lucas/lucas-${String(i + 13).padStart(2, '0')}.webp`)
+      ...Array.from({ length: 5 }, (_, i) => `/images/lucas/lucas-${String(i + 13).padStart(2, '0')}.webp`),
+      '/images/lucas/lucas-18.webp'
     ].filter(p => p !== '/images/lucas/lucas-07.webp'),
     audio: '/audio/mensagem-lucas-primo.mp3',
     message: lucasPrimoSegments.map(s => s.text).join(' '),
@@ -231,17 +240,6 @@ const rawContributors: Contributor[] = [
     transcriptSegments: voReginaSegments
   },
   {
-    // Sem foto por enquanto. Áudio veio como .ogg; convertido pro padrão dos
-    // outros com ffmpeg: silêncio das pontas cortado (areverse), passa-alta
-    // 70Hz, loudnorm -16.5 LUFS / pico -1.5 dBTP, MP3 mono 44.1kHz 96kbps.
-    // Transcrição: Whisper medium. Quando a foto chegar: WebP em
-    // public/images/claudia-kali/ e preencher `photo`.
-    name: 'Tia Claudia & Tio Kali',
-    audio: '/audio/mensagem-claudia-kali.mp3',
-    message: claudiaKaliSegments.map(s => s.text).join(' '),
-    transcriptSegments: claudiaKaliSegments
-  },
-  {
     // tio-gu-01 (WhatsApp, pouca luz/flash) em WebP: sharp com rotate por
     // EXIF, resize inside 1500px, sharpen leve pra compensar o grão/desfoque
     // do flash, quality 82; tio-gu-02 é foto antiga (2009, data cravada na
@@ -249,7 +247,8 @@ const rawContributors: Contributor[] = [
     // compensar). Áudio veio como .ogg; convertido pro padrão dos outros com
     // ffmpeg: silêncio das pontas cortado (areverse), passa-alta 70Hz,
     // loudnorm -16.5 LUFS / pico -1.5 dBTP, MP3 mono 44.1kHz 96kbps.
-    // Transcrição: Whisper medium.
+    // Transcrição: Whisper medium. Vem antes dos tios sem foto (pedido
+    // explícito), pra não juntar todos os "sem foto" num bloco só.
     name: 'Tio Gu',
     photo: '/images/tio-gu/tio-gu-01.webp',
     photos: [
@@ -259,6 +258,17 @@ const rawContributors: Contributor[] = [
     audio: '/audio/mensagem-tio-gu.mp3',
     message: tioGuSegments.map(s => s.text).join(' '),
     transcriptSegments: tioGuSegments
+  },
+  {
+    // Sem foto por enquanto. Áudio veio como .ogg; convertido pro padrão dos
+    // outros com ffmpeg: silêncio das pontas cortado (areverse), passa-alta
+    // 70Hz, loudnorm -16.5 LUFS / pico -1.5 dBTP, MP3 mono 44.1kHz 96kbps.
+    // Transcrição: Whisper medium. Quando a foto chegar: WebP em
+    // public/images/claudia-kali/ e preencher `photo`.
+    name: 'Tia Claudia & Tio Kali',
+    audio: '/audio/mensagem-claudia-kali.mp3',
+    message: claudiaKaliSegments.map(s => s.text).join(' '),
+    transcriptSegments: claudiaKaliSegments
   },
   {
     // Duas mensagens, uma seção só: cada áudio (.ogg cada, mesmo processo de
@@ -327,9 +337,14 @@ const rawContributors: Contributor[] = [
     // photos: vídeo (mesma foto de `photo`, identifica o slot do vídeo — ver
     // ContributorSection.vue) + foto lateral avulsa, pro carrossel/pilha
     // lateral funcionar igual às outras seções sem tirar o vídeo do centro.
+    // Pilha lateral repete a mesma foto do print (arthur-dexis-02, pedido
+    // explícito — arthur-dexis-01 com o rosto não aparece mais). `?side` no
+    // segundo item é só pra não bater na comparação por string igual a
+    // `photo` em photoPool (ContributorSection.vue) — sem isso o item viraria
+    // outro slot de vídeo em vez de foto normal. Mesmo arquivo, mesmo byte.
     photos: [
       '/images/arthur-dexis/arthur-dexis-02.webp',
-      '/images/arthur-dexis/arthur-dexis-01.webp'
+      '/images/arthur-dexis/arthur-dexis-02.webp?side'
     ],
     video: {
       h264: '/video/mensagem-arthur-dexis.mp4',
@@ -382,26 +397,32 @@ const rawContributors: Contributor[] = [
     // Fotos WhatsApp em WebP (sharp: rotate por EXIF, resize inside 1500px,
     // quality 82 — mesmo tratamento dos outros), sem corte. gabriel-campos-03
     // (os dois de branco) = capa, primeiro na lista pra pilha começar
-    // exatamente nela. Sem áudio ainda: quando chegar, mesmo processo dos
-    // demais (ffmpeg trim de silêncio + passa-alta 70Hz + loudnorm
-    // -16.5 LUFS/-1.5 dBTP + MP3 mono 44.1kHz 96kbps), rodar
-    // scripts/transcribe.mjs e preencher audio/message/transcriptSegments.
+    // exatamente nela. Áudio veio como .wav (WhatsApp PTT); convertido pro
+    // padrão dos outros com ffmpeg: silêncio das pontas cortado (areverse),
+    // passa-alta 70Hz, loudnorm -16.5 LUFS / pico -1.5 dBTP, MP3 mono
+    // 44.1kHz 96kbps. Transcrição: WHISPER_MODEL=medium node
+    // scripts/transcribe.mjs public/audio/mensagem-gabriel-campos.mp3;
+    // corrigido "alicece"→"alicerce" (erro de reconhecimento, não da fala).
     name: 'Gabriel, Campos',
     photo: '/images/gabriel-campos/gabriel-campos-03.webp',
+    // gabriel-campos-06 (os três com sinal de rock) adiantada pra logo depois
+    // da capa (pedido explícito). gabriel-campos-07 (grupo na rua à noite)
+    // removida.
     photos: [
       '/images/gabriel-campos/gabriel-campos-03.webp',
+      '/images/gabriel-campos/gabriel-campos-06.webp',
       '/images/gabriel-campos/gabriel-campos-01.webp',
       '/images/gabriel-campos/gabriel-campos-02.webp',
       '/images/gabriel-campos/gabriel-campos-04.webp',
-      '/images/gabriel-campos/gabriel-campos-06.webp',
-      '/images/gabriel-campos/gabriel-campos-07.webp',
       '/images/gabriel-campos/gabriel-campos-08.webp',
       '/images/gabriel-campos/gabriel-campos-09.webp',
       '/images/gabriel-campos/gabriel-campos-10.webp',
       '/images/gabriel-campos/gabriel-campos-11.webp',
       '/images/gabriel-campos/gabriel-campos-12.webp'
     ],
-    message: ''
+    audio: '/audio/mensagem-gabriel-campos.mp3',
+    message: gabrielCamposSegments.map(s => s.text).join(' '),
+    transcriptSegments: gabrielCamposSegments
   },
   {
     // Fotos reais (WhatsApp) em WebP na proporção original, sem upscale;
