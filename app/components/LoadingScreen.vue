@@ -78,11 +78,14 @@ function minDelay(ms: number) {
   return new Promise<void>(resolve => setTimeout(resolve, ms))
 }
 
-// Progresso real da barra: fontes (1) + uma foto por contribuidor + a marca (1)
-// + load da janela (1) — cada passo que resolve empurra a largura, não é uma
-// barra falsa correndo sozinha.
+// Progresso real da barra: fontes (1) + uma foto por contribuidor QUE TEM foto
+// (nem todos têm, ver `contributors.filter(c => c.photo)` no gate abaixo) + a
+// marca (1) + load da janela (1) — cada passo que resolve empurra a largura,
+// não é uma barra falsa correndo sozinha. Contar `contributors.length` aqui
+// (em vez do filtrado) fazia a barra nunca chegar a 100%: travava em ~89%
+// pra sempre, mesmo com o gate real já liberado.
 const progress = ref(0)
-const TOTAL_STEPS = 3 + contributors.length
+const TOTAL_STEPS = 3 + contributors.filter(c => c.photo).length
 let doneSteps = 0
 
 function trackStep<T>(p: Promise<T>): Promise<T> {

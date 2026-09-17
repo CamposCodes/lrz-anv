@@ -1070,16 +1070,20 @@ function setupScene() {
       $gsap.set(el, { xPercent: -50, yPercent: -50, zIndex: pose.zIndex })
     })
   })
-  // Cópias esperando além da borda direita.
-  $gsap.set(reelEls, {
-    xPercent: -50,
-    yPercent: -50,
-    x: offRight,
-    y: (k: number) => passY(k),
-    rotation: (k: number) => (k % 2 ? -1 : 1) * PASS_TILT_DEG,
-    scale: passScale,
-    opacity: 0
-  })
+  // Cópias esperando além da borda direita. Só existem com entrance 'reel'
+  // (v-if no template) — nos outros entrances reelEls vem vazio, e
+  // $gsap.set([], ...) loga "GSAP target not found" à toa.
+  if (reelEls.length) {
+    $gsap.set(reelEls, {
+      xPercent: -50,
+      yPercent: -50,
+      x: offRight,
+      y: (k: number) => passY(k),
+      rotation: (k: number) => (k % 2 ? -1 : 1) * PASS_TILT_DEG,
+      scale: passScale,
+      opacity: 0
+    })
+  }
   // Reais esperando além da borda direita, já na altura da própria pose.
   // Pré-decodifica as fotos: sem isso o navegador decodificava cada uma no
   // quadro em que entrava na tela.
