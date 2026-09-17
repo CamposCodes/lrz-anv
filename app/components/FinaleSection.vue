@@ -1,5 +1,5 @@
 <template>
-  <section ref="sectionEl" class="scroll-scene relative flex min-h-dvh flex-col items-center justify-end gap-6 overflow-hidden px-6 pb-12 sm:px-12">
+  <section ref="sectionEl" class="scroll-scene relative flex min-h-svh flex-col items-center justify-end gap-6 overflow-hidden px-6 pb-12 sm:px-12">
     <!-- Galeria em cilindro ocupando a cena inteira: TODAS as fotos de todo
          mundo em colunas dispostas num cilindro visto por dentro (côncavo) — a coluna do
          meio ao fundo, as das bordas vindo pra frente e girando pro centro.

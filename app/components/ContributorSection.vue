@@ -1,6 +1,12 @@
 <template>
-  <section :id="`contributor-${index}`" ref="sectionEl" class="scroll-scene relative" style="min-height: 200dvh">
-    <div ref="stageEl" class="sticky top-0 h-dvh overflow-hidden px-6">
+  <!-- svh (não dvh): `dvh` encolhe/cresce junto com a barra de endereço do
+       celular, ou seja, a altura da cena mudava DURANTE a rolagem — com
+       scroll-snap mandatory o alvo do snap se mexia embaixo do dedo, e o palco
+       que o GSAP mediu no mount virava outro. `svh` é fixo (viewport com a
+       barra visível): sobra uma faixa preta embaixo quando a barra some, e em
+       troca a geometria da cena nunca muda. -->
+  <section :id="`contributor-${index}`" ref="sectionEl" class="scroll-scene relative" style="min-height: 200svh">
+    <div ref="stageEl" class="sticky top-0 h-svh overflow-hidden px-6">
       <!-- Luz de segurança da câmara escura: brilho vinho atrás da cópia
            central. Acende piscando na entrada (lâmpada ligando) e fica acesa. -->
       <div ref="safelightEl" class="safelight pointer-events-none absolute inset-0 opacity-0" />
@@ -109,7 +115,7 @@
           class="reel-print print pointer-events-none absolute left-1/2 w-max top-[38%] z-0 sm:top-1/2 opacity-0"
           aria-hidden="true"
         >
-          <img :src="photo.photo" alt="" draggable="false" decoding="async" class="max-h-[40dvh] max-w-[min(48vw,28rem)] sm:max-h-[64dvh] sm:max-w-[min(62vw,28rem)]">
+          <img :src="photo.photo" alt="" draggable="false" decoding="async" class="max-h-[40svh] max-w-[min(48vw,28rem)] sm:max-h-[64svh] sm:max-w-[min(62vw,28rem)]">
         </div>
       </template>
 
@@ -127,7 +133,7 @@
         :ref="(el) => setStackRef('prev', i, el)"
         class="print pointer-events-none absolute left-1/2 w-max top-[38%] z-0 sm:top-1/2 opacity-0"
       >
-        <img :src="photo?.photo || undefined" :alt="photo?.name" loading="lazy" draggable="false" class="max-h-[40dvh] max-w-[min(48vw,28rem)] sm:max-h-[64dvh] sm:max-w-[min(62vw,28rem)]">
+        <img :src="photo?.photo || undefined" :alt="photo?.name" loading="lazy" draggable="false" class="max-h-[40svh] max-w-[min(48vw,28rem)] sm:max-h-[64svh] sm:max-w-[min(62vw,28rem)]">
       </div>
 
       <div
@@ -137,7 +143,7 @@
         :ref="(el) => setStackRef('next', i, el)"
         class="print pointer-events-none absolute left-1/2 w-max top-[38%] z-0 sm:top-1/2 opacity-0"
       >
-        <img :src="photo?.photo || undefined" :alt="photo?.name" loading="lazy" draggable="false" class="max-h-[40dvh] max-w-[min(48vw,28rem)] sm:max-h-[64dvh] sm:max-w-[min(62vw,28rem)]">
+        <img :src="photo?.photo || undefined" :alt="photo?.name" loading="lazy" draggable="false" class="max-h-[40svh] max-w-[min(48vw,28rem)] sm:max-h-[64svh] sm:max-w-[min(62vw,28rem)]">
       </div>
 
       <!-- Viajantes: mesma caixa das pilhas e do cartão central, ficam
@@ -151,10 +157,10 @@
            inverso do pedido: a foto que está saindo cobrindo a que está
            virando principal). z-31 > z-30 resolve sem depender de ordem. -->
       <div ref="travelInEl" class="print pointer-events-none absolute left-1/2 w-max top-[38%] z-[31] sm:top-1/2 opacity-0">
-        <img ref="travelInImgEl" draggable="false" loading="lazy" class="max-h-[40dvh] max-w-[min(48vw,28rem)] sm:max-h-[64dvh] sm:max-w-[min(62vw,28rem)]">
+        <img ref="travelInImgEl" draggable="false" loading="lazy" class="max-h-[40svh] max-w-[min(48vw,28rem)] sm:max-h-[64svh] sm:max-w-[min(62vw,28rem)]">
       </div>
       <div ref="travelOutEl" class="print pointer-events-none absolute left-1/2 w-max top-[38%] z-30 sm:top-1/2 opacity-0">
-        <img ref="travelOutImgEl" draggable="false" loading="lazy" class="max-h-[40dvh] max-w-[min(48vw,28rem)] sm:max-h-[64dvh] sm:max-w-[min(62vw,28rem)]">
+        <img ref="travelOutImgEl" draggable="false" loading="lazy" class="max-h-[40svh] max-w-[min(48vw,28rem)] sm:max-h-[64svh] sm:max-w-[min(62vw,28rem)]">
       </div>
 
       <!-- Coluna central: só a foto arrastável (reta, sem giro estático). No mobile
@@ -228,7 +234,7 @@
                 :alt="current.name"
                 loading="lazy"
                 draggable="false"
-                class="max-h-[40dvh] max-w-[min(48vw,28rem)] sm:max-h-[64dvh] sm:max-w-[min(62vw,28rem)]"
+                class="max-h-[40svh] max-w-[min(48vw,28rem)] sm:max-h-[64svh] sm:max-w-[min(62vw,28rem)]"
               >
               <!-- Foto ainda não chegou: papel fotográfico em branco (mesma
                    moldura) com o nome — a seção funciona inteira sem ela. -->
@@ -897,6 +903,19 @@ const STACK_ROTATION_STEP = 3
 // competir visualmente com a de cima sem parecer transparente.
 const STACK_LAYER_OPACITY = [1, 0.97, 0.94]
 
+// Mede o palco e escolhe o offset vertical do breakpoint. Roda no setup E em
+// cada resize/rotação (ver onViewportResize): sem remedir, girar o celular
+// mantinha a matemática das poses no tamanho ANTIGO enquanto o CSS já tinha
+// trocado de âncora (top-[38%] → sm:top-1/2 nos 640px), e as pilhas paravam
+// fora do canto.
+function measureStage() {
+  stageWidth = stageEl.value?.clientWidth ?? window.innerWidth
+  stageHeight = stageEl.value?.clientHeight ?? window.innerHeight
+  // Breakpoint mobile = mesmo `sm` (640px) que já rege o resto do layout da
+  // legenda no template — abaixo dele as pilhas ganham mais respiro vertical.
+  STACK_OFFSET_Y = stageWidth < 640 ? STACK_OFFSET_Y_MOBILE : STACK_OFFSET_Y_DESKTOP
+}
+
 function stackPose(side: 'prev' | 'next', layerIndex: number) {
   const dir = side === 'prev' ? -1 : 1
   const peek = layerIndex * STACK_LAYER_PEEK
@@ -927,11 +946,62 @@ function poseFromDataset(target: Element, key: string): number {
   return Number((target as HTMLElement).dataset[key] ?? 0)
 }
 
+// Pose de repouso das pilhas guardada em dataset pra o tween com stagger
+// usar valor-por-alvo quando as reais formam o carrossel. zIndex já nasce
+// no valor de repouso e NUNCA muda: pirâmide (centro z-20 no photoStageEl,
+// camada 0 = 3, camada 2 = 1).
+// Reescrito a cada resize: o dataset é inerte (só é LIDO quando a timeline de
+// entrada renderiza pela primeira vez), então atualizá-lo corrige as seções
+// ainda não visitadas sem mexer em nenhuma timeline já rodada.
+function writeStackPoses() {
+  ;(['prev', 'next'] as const).forEach((side) => {
+    const els = side === 'prev' ? prevStackEls : nextStackEls
+    els.forEach((el, i) => {
+      if (!el) return
+      const pose = stackPose(side, i)
+      el.dataset.poseX = String(pose.x)
+      el.dataset.poseY = String(pose.y)
+      el.dataset.poseRotation = String(pose.rotation)
+      el.dataset.poseScale = String(pose.scale)
+      el.dataset.poseOpacity = String(STACK_LAYER_OPACITY[i] ?? 0.4)
+      $gsap.set(el, { xPercent: -50, yPercent: -50, zIndex: pose.zIndex })
+    })
+  })
+}
+
 const { $gsap, $prefersReducedMotion } = useNuxtApp()
 
 // gsap.context escopa os seletores ao componente e junta TODO tween/
 // ScrollTrigger criado no setup — onBeforeUnmount reverte tudo de uma vez.
 let ctx: { revert: () => void } | null = null
+
+// Timeline de entrada da cena, guardada só pra saber se ela JÁ montou o
+// carrossel (progress 1) na hora de um resize — ver onViewportResize.
+let entranceTl: { progress: () => number } | null = null
+let onViewportResize: (() => void) | null = null
+
+// Girar o celular (ou qualquer resize) muda o tamanho do palco, e toda a
+// matemática das poses depende dele. Debounce de 150ms igual ao do
+// FinaleSection. Deliberadamente NÃO invalida a timeline de entrada: ela é
+// toda `.to()` com destino explícito e já renderizada, e `invalidate()` faria
+// o GSAP reler o estado ATUAL como início — o reverse (subir o scroll) perderia
+// o voo de volta das cópias. Reescrever o dataset (lido só no primeiro render
+// de cada cena) já corrige as seções ainda não visitadas.
+function handleViewportResize() {
+  measureStage()
+  writeStackPoses()
+  // Cena já montada: recoloca as pilhas nas poses novas preservando a opacidade
+  // atual (repor com a opacidade de repouso acenderia pilha de cena que ainda
+  // não entrou).
+  if (entranceTl?.progress() !== 1) return
+  ;(['prev', 'next'] as const).forEach((side) => {
+    const els = side === 'prev' ? prevStackEls : nextStackEls
+    els.forEach((el, i) => {
+      if (!el) return
+      setStackPose(el, side, i, Number($gsap.getProperty(el, 'opacity')))
+    })
+  })
+}
 
 onMounted(() => {
   if (!$gsap || !sectionEl.value) return
@@ -958,6 +1028,13 @@ onMounted(() => {
     return
   }
   ctx = $gsap.context(setupScene, sectionEl.value)
+
+  let resizeTimer = 0
+  onViewportResize = () => {
+    window.clearTimeout(resizeTimer)
+    resizeTimer = window.setTimeout(handleViewportResize, 150)
+  }
+  window.addEventListener('resize', onViewportResize)
 })
 
 // Entrada simples: cópias com fotos do pool atravessam a tela da
@@ -980,11 +1057,7 @@ function setupScene() {
     || !safelightEl.value || !travelInEl.value || !travelOutEl.value || !captionEl.value
     || prevStackEls.some(el => !el) || nextStackEls.some(el => !el)) return
 
-  stageWidth = stageEl.value?.clientWidth ?? window.innerWidth
-  stageHeight = stageEl.value?.clientHeight ?? window.innerHeight
-  // Breakpoint mobile = mesmo `sm` (640px) que já rege o resto do layout da
-  // legenda no template — abaixo dele as pilhas ganham mais respiro vertical.
-  STACK_OFFSET_Y = stageWidth < 640 ? STACK_OFFSET_Y_MOBILE : STACK_OFFSET_Y_DESKTOP
+  measureStage()
 
   // Sorteio de verdade só depois de montado (client-only) — a fila começa fora
   // da tela (ver gsap.set abaixo), então trocar o texto aqui não pisca nada.
@@ -1053,23 +1126,7 @@ function setupScene() {
   // de altura pra não parecer uma régua.
   const passY = (k: number) => [0, -0.06, 0.05, -0.03, 0.07, -0.05, 0.02, -0.07][k % 8]! * stageHeight
 
-  // Pose de repouso das pilhas guardada em dataset pra o tween com stagger
-  // usar valor-por-alvo quando as reais formam o carrossel. zIndex já nasce
-  // no valor de repouso e NUNCA muda: pirâmide (centro z-20 no photoStageEl,
-  // camada 0 = 3, camada 2 = 1).
-  ;(['prev', 'next'] as const).forEach((side) => {
-    const els = side === 'prev' ? prevStackEls : nextStackEls
-    els.forEach((el, i) => {
-      if (!el) return
-      const pose = stackPose(side, i)
-      el.dataset.poseX = String(pose.x)
-      el.dataset.poseY = String(pose.y)
-      el.dataset.poseRotation = String(pose.rotation)
-      el.dataset.poseScale = String(pose.scale)
-      el.dataset.poseOpacity = String(STACK_LAYER_OPACITY[i] ?? 0.4)
-      $gsap.set(el, { xPercent: -50, yPercent: -50, zIndex: pose.zIndex })
-    })
-  })
+  writeStackPoses()
   // Cópias esperando além da borda direita. Só existem com entrance 'reel'
   // (v-if no template) — nos outros entrances reelEls vem vazio, e
   // $gsap.set([], ...) loga "GSAP target not found" à toa.
@@ -1118,6 +1175,7 @@ function setupScene() {
       toggleActions: 'play reverse play reverse'
     }
   })
+  entranceTl = tl
 
   if (entrance === 'letters') {
     // Queda reta (y) com leve deriva lateral (x relativo) e rotação contínua
@@ -1519,6 +1577,7 @@ onBeforeUnmount(() => {
   flipTween?.kill()
   ctx?.revert()
   closeLightbox()
+  if (onViewportResize) window.removeEventListener('resize', onViewportResize)
 })
 </script>
 
@@ -1536,7 +1595,7 @@ onBeforeUnmount(() => {
    "emulsão" escura, mesmo tamanho máximo de uma foto em pé no cartão. */
 .print-empty {
   position: relative;
-  height: min(40dvh, calc(min(48vw, 28rem) * 1.25));
+  height: min(40svh, calc(min(48vw, 28rem) * 1.25));
   aspect-ratio: 4 / 5;
   background: linear-gradient(155deg, #3a2a22 0%, #1f1612 60%, #120c0a 100%);
   text-shadow: 0 2px 10px rgba(0, 0, 0, 0.9);
@@ -1544,14 +1603,14 @@ onBeforeUnmount(() => {
 
 @media (min-width: 640px) {
   .print-empty {
-    height: min(64dvh, calc(min(62vw, 28rem) * 1.25));
+    height: min(64svh, calc(min(62vw, 28rem) * 1.25));
   }
 }
 
 .print-video {
   display: block;
   position: relative;
-  height: min(40dvh, calc(min(48vw, 28rem) * var(--video-ratio)));
+  height: min(40svh, calc(min(48vw, 28rem) * var(--video-ratio)));
   aspect-ratio: calc(1 / var(--video-ratio));
   object-fit: contain;
   background: #000;
@@ -1559,7 +1618,7 @@ onBeforeUnmount(() => {
 
 @media (min-width: 640px) {
   .print-video {
-    height: min(64dvh, calc(min(62vw, 28rem) * var(--video-ratio)));
+    height: min(64svh, calc(min(62vw, 28rem) * var(--video-ratio)));
   }
 }
 
