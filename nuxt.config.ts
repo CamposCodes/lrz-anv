@@ -13,7 +13,6 @@ export default defineNuxtConfig({
   css: ['~/assets/css/tailwind.css'],
   pages: true,
 
-  // Transição de página global — classes .page-* em tailwind.css.
   app: {
     pageTransition: { name: 'page', mode: 'out-in' },
     head: {
@@ -33,11 +32,10 @@ export default defineNuxtConfig({
     'shadcn-nuxt',
     '@nuxt/fonts',
     '@nuxt/scripts',
-    'motion-v/nuxt', // animações (Motion for Vue)
+    'motion-v/nuxt', 
     '@nuxt/eslint'
   ],
 
-  // components/ui/ fica reservado para os componentes shadcn gerados pela CLI.
   shadcn: {
     prefix: '',
     componentDir: './app/components/ui'
@@ -48,9 +46,6 @@ export default defineNuxtConfig({
   },
 
   nitro: {
-    // Força preset estático puro: sem isso, na Netlify o Nitro auto-detecta
-    // o ambiente e troca pro preset `netlify` (functions), que não gera
-    // `.output/public` — quebra o publish directory configurado.
     preset: 'static',
     prerender: {
       crawlLinks: true,
@@ -58,6 +53,5 @@ export default defineNuxtConfig({
     }
   },
 
-  // Inline do CSS crítico para FCP melhor.
   features: { inlineStyles: true }
 })

@@ -1,29 +1,11 @@
 #!/usr/bin/env node
-// Gera transcriptSegments (texto + timestamp por frase) pra um áudio OU vídeo,
-// usando Whisper local (`pip install openai-whisper`, roda 100% offline, sem
-// chave de API). Uso:
-//   node scripts/transcribe.mjs public/audio/algum-audio.mp3
-//   node scripts/transcribe.mjs public/video/algum-video.mp4
-// Escreve o resultado em app/data/transcripts/<nome-do-arquivo>.json.
-//
-// O Whisper devolve blocos de até ~30s — grandes demais pra legenda do site,
-// que troca por FRASE e reserva ~4 linhas. Por isso roda com
-// --word_timestamps e remonta frases de até MAX_CHARS caracteres, quebrando
-// preferencialmente em pontuação, com start/end tirados do tempo REAL da
-// primeira e da última palavra de cada frase (legenda sincronizada de verdade,
-// não tempo estimado). Revise o texto depois: nomes próprios e gírias podem
-// sair errados (ex.: "Lorena" em vez de "Lorenzo").
 import { execFileSync } from 'node:child_process'
 import { mkdtempSync, readFileSync, writeFileSync, mkdirSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, basename, extname } from 'node:path'
 
 const MAX_CHARS = 95
-// Modelo do Whisper: small é rápido; medium erra bem menos em fala informal
-// (gírias, fala rápida). Ex.: WHISPER_MODEL=medium node scripts/transcribe.mjs ...
 const MODEL = process.env.WHISPER_MODEL || 'small'
-// Prompt inicial pontuado e no tom das mensagens: sem ele o Whisper às vezes
-// devolve tudo em minúsculas e sem pontuação, e as frases quebram no meio.
 const INITIAL_PROMPT = 'Feliz aniversário, Lorenzo! Tá ligado, mano? Te amo, irmão. Tudo de melhor pra você.'
 
 const mediaPath = process.argv[2]
@@ -52,9 +34,6 @@ rmSync(workDir, { recursive: true, force: true })
 const round = t => Math.round(t * 100) / 100
 const words = raw.segments.flatMap(s => s.words ?? []).map(w => ({ text: w.word.trim(), start: w.start, end: w.end }))
 
-// Junta palavras em frases: fecha a frase ao terminar em pontuação forte
-// (. ! ?) ou quando a próxima palavra estouraria MAX_CHARS — nesse caso volta
-// até a última vírgula da frase, se houver, pra não cortar no meio da ideia.
 const segments = []
 let current = []
 const textOf = ws => ws.map(w => w.text).join(' ')
@@ -82,9 +61,6 @@ for (const word of words) {
 }
 flush(current)
 
-// Junta frases vizinhas curtas ("Te amo.", "Pra frente.") numa só quando a
-// pausa entre elas é pequena e o total cabe em MAX_CHARS — sem isso a
-// legenda troca a cada meio segundo e fica impossível de ler.
 const MERGE_GAP = 0.8
 const SHORT = 30
 for (let i = 0; i < segments.length - 1;) {

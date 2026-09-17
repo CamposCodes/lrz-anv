@@ -5,9 +5,6 @@ import {
   expectSceneEntered, expectSceneReversed, collectErrors
 } from './helpers'
 
-// Varredura das 25 cenas em ambos os sentidos, nos dois breakpoints do site
-// (único corte em 640px). Cada varredura espera a timeline de entrada de cada
-// seção, então o teste é longo por natureza.
 for (const [nome, viewport] of [['mobile', PORTRAIT], ['desktop', DESKTOP]] as const) {
   test.describe(nome, () => {
     test.use({ viewport })
@@ -22,24 +19,18 @@ for (const [nome, viewport] of [['mobile', PORTRAIT], ['desktop', DESKTOP]] as c
       const tops = await sceneTops(page)
       expect(tops).toHaveLength(SCENE_COUNT)
 
-      // Descendo: cada seção assenta no próprio topo E monta o conteúdo.
-      // É a garantia de que nenhuma passa despercebida num scroll rápido.
       for (let i = 0; i < CONTRIBUTOR_COUNT; i++) {
-        const top = tops[i + 1]! // tops[0] é a capa
+        const top = tops[i + 1]! 
         await scrollTo(page, top)
         expect(Math.round(await page.evaluate(() => window.scrollY))).toBe(top)
         await expectSceneEntered(page, i)
       }
 
-      // Subindo: a entrada tem de tocar ao contrário (toggleActions
-      // 'play reverse play reverse'), senão a cena fica montada pra sempre e
-      // descer de novo não anima nada.
       for (let i = CONTRIBUTOR_COUNT - 1; i >= 0; i--) {
-        await scrollTo(page, tops[i]!) // cena anterior = ponto de snap real
+        await scrollTo(page, tops[i]!) 
         await expectSceneReversed(page, i)
       }
 
-      // E descendo de novo: o ciclo completo tem de ser repetível.
       for (const i of [0, Math.floor(CONTRIBUTOR_COUNT / 2), CONTRIBUTOR_COUNT - 1]) {
         await scrollTo(page, tops[i + 1]!)
         await expectSceneEntered(page, i)
@@ -61,16 +52,13 @@ test.describe('capa e final', () => {
     const letter = page.locator('.ransom-letter').first()
     const opacity = () => letter.evaluate(el => Number(getComputedStyle(el).opacity))
 
-    // No topo, título inteiro visível.
     await scrollTo(page, 0)
     await expect.poll(opacity, { timeout: 10000 }).toBeGreaterThan(0.9)
 
-    // Rolando pra fora da capa, as letras dispersam (scrub ligado à rolagem).
     const tops = await sceneTops(page)
     await scrollTo(page, tops[1]!)
     await expect.poll(opacity, { timeout: 10000 }).toBeLessThan(0.1)
 
-    // Scrub é reversível por natureza: voltando ao topo, o título se refaz.
     await scrollTo(page, 0)
     await expect.poll(opacity, { timeout: 10000 }).toBeGreaterThan(0.9)
   })
@@ -89,7 +77,6 @@ test.describe('capa e final', () => {
       { timeout: 15000 }
     ).toBeGreaterThan(0.9)
 
-    // A galeria cilíndrica precisa ter montado cartões de verdade.
     const cards = await page.locator('.gallery-col img').count()
     expect(cards).toBeGreaterThan(0)
   })
@@ -109,12 +96,9 @@ test.describe('menu de navegação', () => {
     const panel = page.locator('#nav-menu-panel')
     await expect(panel).toBeVisible()
 
-    // Um botão por contribuidor.
     const pills = panel.locator('button')
     expect(await pills.count()).toBe(CONTRIBUTOR_COUNT)
 
-    // Toda linha tem nome em cursiva E apelido em amarelo — o apelido é o que
-    // distingue os homônimos (dois Arthur, dois Gabriel, dois Vitor).
     expect(await panel.locator('.nav-menu-name').count()).toBe(CONTRIBUTOR_COUNT)
     expect(await panel.locator('.nav-menu-title').count()).toBe(CONTRIBUTOR_COUNT)
 
@@ -142,8 +126,6 @@ test.describe('movimento reduzido', () => {
 
     const tops = await sceneTops(page)
 
-    // Sem animação de entrada, o conteúdo precisa nascer no estado final —
-    // o risco aqui é o oposto do normal: cena que nunca fica visível.
     for (const i of [0, 12, 24]) {
       await scrollTo(page, tops[i + 1]!)
       await expect.poll(() => sceneOpacity(page, i), { timeout: 10000 }).toBeGreaterThan(0.9)

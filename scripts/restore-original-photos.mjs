@@ -1,16 +1,4 @@
 #!/usr/bin/env node
-// Reexporta as fotos do site a partir do ORIGINAL do WhatsApp, inteiro, na
-// proporção real. Os .webp anteriores foram forçados pra 4:5 — com fundo
-// borrado da própria foto nas sobras (scripts antigos, já removidos) ou com
-// recorte. A moldura de cópia do site agora
-// se adapta à proporção de cada foto, então nenhum dos dois faz mais sentido.
-//
-// Mapa original -> arquivo conferido visualmente (lado a lado) na conversa.
-// Pai: numerado pela ordem alfabética dos arquivos da pasta.
-// pai-17 é tratado à parte no fim: UM original com duas fotos físicas
-// coladas, dividido em pai-17a/pai-17b.
-//
-// Uso: node scripts/restore-original-photos.mjs
 import sharp from 'sharp'
 import { readdirSync } from 'node:fs'
 import { join } from 'node:path'
@@ -56,18 +44,12 @@ function exportWebp(image, out) {
 }
 
 for (const [out, src] of Object.entries(MAP)) {
-  await exportWebp(sharp(src).rotate(), out) // orientação EXIF antes de tudo
+  await exportWebp(sharp(src).rotate(), out) 
 }
 
-// pai-17: duas fotos físicas coladas verticalmente no mesmo original
-// (899x1599). Costura medida linha a linha: foto de cima termina em y=765,
-// transição 766–769, foto de baixo (céu) estável a partir de y=770.
 const pai17 = join(PAI_DIR, paiFiles[16])
 const { width: w17, height: h17 } = await sharp(pai17).metadata()
 await exportWebp(sharp(pai17).extract({ left: 0, top: 0, width: w17, height: 765 }), 'pai/pai-17a.webp')
 await exportWebp(sharp(pai17).extract({ left: 0, top: 771, width: w17, height: h17 - 771 }), 'pai/pai-17b.webp')
 
-// vitor-11: o "original" é print de tela do WhatsApp (720x1600) com a foto
-// no meio. Faixas escuras da interface medidas linha a linha: foto em
-// y=478–1198, largura inteira.
 await exportWebp(sharp(vitor('10.19.27')).extract({ left: 0, top: 478, width: 720, height: 720 }), 'vitor/vitor-11.webp')

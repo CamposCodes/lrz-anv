@@ -1,4 +1,3 @@
-// Só uma mensagem toca por vez: módulo guarda o <audio>/<video> ativo e pausa o anterior ao trocar.
 const activeAudio = ref<HTMLMediaElement | null>(null)
 
 export const useAudioPlayer = () => {
@@ -7,12 +6,6 @@ export const useAudioPlayer = () => {
   const currentTime = ref(0)
   const duration = ref(0)
 
-  // Assume o controle incondicionalmente (não olha `isPlaying` local) — pra
-  // autoplay disparado pelo sistema (ex.: vídeo que vira o item central do
-  // carrossel em ContributorSection.vue), onde não dá pra confiar que o
-  // estado local já reflita o real (o <video> pode ter sido criado agora
-  // mesmo). Mesmo efeito colateral de `toggle` ao dar play: pausa qualquer
-  // outro áudio/vídeo tocando em QUALQUER seção antes de tocar este.
   const play = () => {
     const el = audioRef.value
     if (!el) return
@@ -39,9 +32,6 @@ export const useAudioPlayer = () => {
     if (audioRef.value) audioRef.value.currentTime = time
   }
 
-  // Retrocede/avança N segundos dentro do MESMO áudio (não existe playlist
-  // aqui — cada player toca um único depoimento). Clampeia em [0, duration]
-  // pra não deixar currentTime negativo nem passar da duração real.
   const skip = (delta: number) => {
     const el = audioRef.value
     if (!el) return

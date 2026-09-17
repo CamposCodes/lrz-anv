@@ -10,11 +10,6 @@
 </template>
 
 <script lang="ts" setup>
-// <Motion> é auto-importado por motion-v/nuxt (renderiza uma <div> por padrão).
-// Reveal on-scroll SSR-safe: o conteúdo é renderizado no servidor (visível para
-// crawlers) e anima no cliente quando entra na viewport.
-// ease [0.16,1,0.3,1] = mesma curva fluida dos tokens CSS (--ease-fluid).
-// `delay` permite stagger ao usar v-for (ex.: :delay="i * 0.06").
 withDefaults(defineProps<{
   delay?: number
   duration?: number

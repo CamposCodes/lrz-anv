@@ -33,29 +33,19 @@
 <script setup lang="ts">
 import { ChevronDown } from '@lucide/vue'
 
-// Cada letra numa "cor de papel" diferente, tipo recorte de revista de verdade —
-// ordem embaralhada de propósito (não é ROYGBIV em sequência) e fixa por posição,
-// nunca Math.random() (isso quebraria o hydration: servidor e cliente sorteariam
-// cores diferentes pro mesmo índice).
-// Todas com contraste >= 3:1 contra o fundo preto (WCAG AA pra texto grande),
-// medido de verdade (luminância relativa), não no olho.
 const RANSOM_COLORS = [
-  '#f2b90f', // dourado (marca) — 11.72:1
-  '#e63946', // vermelho — 5.04:1
-  '#2a9d8f', // verde-azulado — 6.32:1
-  '#f2f2f2', // quase-branco (marca) — 18.76:1
-  '#9b5de5', // roxo — 5.09:1
-  '#588157', // verde — 4.69:1
-  '#ff8fab', // rosa — 9.77:1
-  '#457b9d', // azul — 4.57:1
-  '#b03a3a', // vinho (marca, clareado — #520000 puro dava só 1.36:1) — 3.51:1
-  '#e9724c' // laranja — 6.98:1
+  '#f2b90f', 
+  '#e63946', 
+  '#2a9d8f', 
+  '#f2f2f2', 
+  '#9b5de5', 
+  '#588157', 
+  '#ff8fab', 
+  '#457b9d', 
+  '#b03a3a', 
+  '#e9724c' 
 ]
 
-// O "I" na Magazine Letter é só um traço fino, sem o "papel" de fundo que as
-// outras letras têm. Em vez de forçar um chip artificial, usa a Pauls Ransom
-// Note (a fonte anterior) só nesse caractere — ela desenha o "I" com o recorte
-// de papel de verdade. Mistura as duas fontes de propósito.
 const isThinGlyph = (ch: string) => ch === 'I'
 
 const sectionEl = ref<HTMLElement | null>(null)
@@ -69,11 +59,6 @@ onMounted(() => {
   const letters = titleWrapEl.value.querySelectorAll<HTMLElement>('.ransom-letter')
   const nameEl = titleWrapEl.value.querySelector<HTMLElement>('.cover-name')
 
-  // Lado de cada letra (esquerda/direita do centro do bloco), medido AGORA —
-  // antes de qualquer transform de animação. getBoundingClientRect já reflete
-  // a rotação estática do CSS (nth-child), então isso captura a posição de
-  // repouso real; medir depois da entrada em espiral pegaria a posição
-  // embaralhada de partida em vez da final.
   const wrapCenterX = titleWrapEl.value.getBoundingClientRect().left + titleWrapEl.value.getBoundingClientRect().width / 2
   const letterOffsets = Array.from(letters, (el) => {
     const r = el.getBoundingClientRect()
@@ -85,31 +70,12 @@ onMounted(() => {
     return
   }
 
-  // Lorenzo chega diferente das letras: nada de espiral. Anima o elemento direto
-  // (opacity + y + rotation/scale), sem SplitText/mask — um mask com overflow:
-  // clip revela a palavra deslizando através de uma janela fixa, o que SEMPRE
-  // mostra o glifo cortado pela metade em algum ponto do meio da transição
-  // (a cursiva conecta letra com letra, então até um único frame cortado quebra
-  // o traço visualmente). Animar o elemento inteiro garante que "Lorenzo" é
-  // sempre desenhado por completo — só posição/opacidade/escala mudam.
-
-  // Assim que o scroll começa, cada letra dispersa pro seu próprio lado (usa
-  // letterOffsets: quem já está mais à esquerda/direita do centro voa mais
-  // longe nessa direção) enquanto encolhe e some — sem subir, é o mergulho/
-  // imersão pra dentro da tela, não rolagem pra fora. Cobre exatamente os
-  // 100vh do Cover (start 'top top' até end 'bottom top').
   if ($ScrollTrigger && sectionEl.value) {
     const tl = $gsap.timeline({
       scrollTrigger: {
         trigger: sectionEl.value,
         start: 'top top',
         end: 'bottom top',
-        // scrub numérico (não `true`): com scroll-snap forçando o fling a
-        // assentar na próxima cena quase instantaneamente, um scrub 1:1 fazia
-        // essa animação inteira acontecer nesse mesmo instante — mal dava pra
-        // ver as letras se dispersando. Com atraso, a timeline continua
-        // "alcançando" o progresso por ~0.9s mesmo depois do scroll físico
-        // já ter terminado, garantindo a cena inteira visível.
         scrub: 0.9
       }
     })
@@ -134,11 +100,6 @@ onMounted(() => {
     const { isMobile } = context.conditions
     const [minRadius, maxRadius] = isMobile ? [40, 80] : [90, 180]
 
-    // Cada letra sorteia seu próprio ponto de partida (ângulo + raio) num círculo ao
-    // redor da posição final e várias voltas de rotação — some de um giro caótico e
-    // "espirala" pra dentro até pousar formando a palavra. Ângulo e raio precisam vir
-    // do mesmo sorteio por letra (guardado em array) senão x/y giram de pontos
-    // descolados e o efeito de espiral se perde.
     const angles = Array.from(letters, () => $gsap.utils.random(0, Math.PI * 2))
     const radii = Array.from(letters, () => $gsap.utils.random(minRadius, maxRadius))
 

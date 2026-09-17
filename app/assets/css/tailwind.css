@@ -3,12 +3,6 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* ============================================================
-   TIPOGRAFIA — dupla proposital: Comico (display, bold, estrutural)
-   carrega o peso do texto; Luxurious Script (cursiva, expressiva) é
-   reservada só pro nome do Lorenzo — nunca as duas na mesma palavra.
-   Contraste de peso + tamanho + papel é o que faz a mistura funcionar.
-   ============================================================ */
 @font-face {
   font-family: 'Comico';
   src:
@@ -27,9 +21,6 @@
   font-family: 'Luxurious Script', cursive;
 }
 
-/* Instrument Serif — mensagens dos convidados pro Lorenzo. Resolvida pelo
-   @nuxt/fonts (mesmo mecanismo do Luxurious Script acima: detecta o
-   font-family no CSS e busca/self-hosta sozinho, sem @font-face manual). */
 .font-instrument-serif {
   font-family: 'Instrument Serif', serif;
 }
@@ -62,9 +53,6 @@
   font-family: 'Magazine Letter', cursive;
 }
 
-/* Recorte de revista: cada letra "colada" torta, com leve variação de tamanho —
-   determinístico por posição (nth-child), nunca random, pra não gerar mismatch
-   entre o HTML do servidor e o do cliente. */
 .ransom-letter:nth-child(odd) { transform: rotate(-4deg) translateY(-2px); }
 .ransom-letter:nth-child(even) { transform: rotate(4deg) translateY(2px); }
 .ransom-letter:nth-child(3n) { transform: rotate(-7deg) translateY(1px); font-size: 1.08em; }
@@ -73,8 +61,6 @@
 :root {
   --radius: 0.625rem;
 
-  /* Paleta da marca — preto, vinho, dourado, quase-branco. Dourado é o único accent:
-     usado só em ações/estados interativos (primary/accent/ring), nunca em superfície. */
   --background: #000000;
   --foreground: #f2f2f2;
   --card: #2e1212;
@@ -154,14 +140,6 @@
 @layer base {
   html {
     scroll-behavior: smooth;
-    /* Cada "cena" (Cover, cada ContributorSection, Finale) é um ponto de
-       snap — sem isso, um scroll rápido/fling (comum no celular) podia
-       atravessar uma seção inteira de 200vh antes da animação de entrada
-       dela sequer disparar visualmente. `mandatory` garante que o scroll
-       sempre assenta numa cena por vez; `.scroll-scene` (embaixo) marca
-       onde. Não interfere no scrub interno do Cover nem no pin do
-       ContributorSection — só decide onde o scroll "solto"/fling assenta
-       quando o gesto termina. */
     scroll-snap-type: y mandatory;
   }
 
@@ -171,19 +149,6 @@
   }
 }
 
-/* ============================================================
-   SCROLLBAR — fina e translúcida, estilo macOS/Safari: cinza puro sobre
-   preto, nunca o dourado da marca (a barra é utilitário de navegação, não
-   elemento de marca — accent ali competiria com o próprio conteúdo dourado
-   das legendas). Track transparente (sem "calha" visível) e thumb flutuando
-   com respiro (border transparente + background-clip: padding-box, o
-   mesmo truque do Safari) em vez de preencher a largura inteira — é esse
-   respiro que lê como overlay minimalista, não uma barra clássica do
-   Windows. Regra global (html + *): cobre o scroll da página inteira e
-   qualquer área interna com overflow próprio (verso da foto no
-   ContributorSection, painel do NavMenu), sem repetir a regra em cada uma.
-   Firefox via scrollbar-width/-color; demais navegadores via
-   ::-webkit-scrollbar (sem prefixo unificado ainda). */
 @layer base {
   html {
     scrollbar-width: thin;
@@ -225,65 +190,32 @@
     scroll-behavior: auto !important;
   }
 
-  /* Snap forçado é ele mesmo um movimento brusco — quem pede menos
-     movimento não deve ser "puxado" de volta pra cena nenhuma. */
   html {
     scroll-snap-type: none !important;
   }
 }
 
-/* Marca o início de cada cena de scroll (Cover/ContributorSection/Finale)
-   como ponto de snap. `stop: always` é o que de fato impede pular uma cena
-   inteira num fling rápido — sem ele, `mandatory` ainda deixaria o navegador
-   "pular direto" pro próximo ponto de snap se o gesto for forte o
-   suficiente; com `always`, o scroll é obrigado a passar por CADA cena. */
 .scroll-scene {
   scroll-snap-align: start;
   scroll-snap-stop: always;
-  /* `contain: paint` obriga o navegador a recortar QUALQUER conteúdo desta
-     seção (inclusive camadas com transform/will-change 3D, tipo a galeria
-     arrastável do Finale) nos limites da própria caixa — sem isso, um glitch
-     de composição no scroll rápido pra frente/trás no Android Chrome deixava
-     a galeria "grudada" por cima da cena anterior. `isolation: isolate` dá a
-     cada cena seu próprio contexto de empilhamento, então nada de uma cena
-     pinta por cima de outra mesmo sob esse tipo de bug de renderização. */
   contain: layout paint;
   isolation: isolate;
 }
 
-/* ============================================================
-   CÓPIA DE LABORATÓRIO — toda foto do site é uma cópia antiga em papel
-   fotográfico: margem creme IGUAL nos quatro lados (não a base grossa de
-   polaroid) e borda serrilhada ("deckle") das cópias dos anos 50–70.
-   A moldura é padding em volta do <img>, nunca por cima dele, e a cópia
-   encolhe até o tamanho da foto: cada foto mantém a PRÓPRIA proporção
-   (retrato, paisagem, quadrada), sem corte e sem preenchimento.
-   ============================================================ */
 @layer components {
   .print {
-    /* Raio de cada dente da borda serrilhada. */
     --deckle: 3px;
-    /* Serrilhado = círculos ladrilhados (round encaixa número inteiro, então
-       os dentes fecham certinho nos cantos) + retângulo sólido recuado 1 raio.
-       Só as metades de fora dos círculos da borda sobram como dentes. */
     --deckle-mask:
       radial-gradient(circle closest-side, #000 96%, #0000) 0 0 / calc(2 * var(--deckle)) calc(2 * var(--deckle)) round,
       linear-gradient(#000 0 0) 50% 50% / calc(100% - 2 * var(--deckle)) calc(100% - 2 * var(--deckle)) no-repeat;
     position: relative;
     isolation: isolate;
-    /* Margem do papel — em px/vmin, nunca %: % de padding resolve pela
-       largura do bloco PAI (stage inteiro nas pilhas, grid de largura 0 no
-       mural), não da própria cópia. */
     --frame: clamp(8px, 2.2vmin, 20px);
     display: block;
     padding: var(--frame);
-    /* Só a sombra larga: uma sombra de contato apertada desenharia o
-       retângulo em volta dos dentes. */
     box-shadow: 0 18px 34px -14px rgba(0, 0, 0, 0.75);
   }
 
-  /* Papel: creme amarelado nas bordas (envelhecimento), serrilhado via mask
-     num pseudo — mask no próprio .print cortaria a sombra. */
   .print::before {
     content: '';
     position: absolute;
@@ -294,9 +226,6 @@
     mask: var(--deckle-mask);
   }
 
-  /* Foto na proporção natural: width/height auto + max-w/max-h (utilities
-     no template) = encaixa na caixa máxima sem distorcer nem cortar.
-     Grade de cópia antiga (estático): pretos levemente lavados, calor sutil. */
   .print img {
     display: block;
     width: auto;
@@ -305,8 +234,6 @@
     filter: contrast(1.04) saturate(0.92) sepia(0.1);
   }
 
-  /* Grão por cima de foto + papel — alpha puro (sem blend-mode), então
-     arrastar a cópia não força repaint. Mesmo serrilhado do papel. */
   .print::after {
     content: '';
     position: absolute;
@@ -318,8 +245,6 @@
     pointer-events: none;
   }
 
-  /* Verso do papel fotográfico: marca-d'água diagonal repetida, igual ao
-     verso das cópias de laboratório, com o mesmo serrilhado da frente. */
   .print-back {
     --deckle: 3px;
     background-color: #f3ecdf;
@@ -333,10 +258,6 @@
   }
 }
 
-/* Fade radial atrás da legenda solta do ContributorSection (sem virar caixa) —
-   dá contraste pro texto sobre a foto/fundo sem reintroduzir borda/fundo
-   sólido/blur. ::before do próprio elemento (não um node novo), então herda a
-   opacity que o GSAP anima no container e acompanha entrada/saída sozinho. */
 .caption-fade::before {
   content: '';
   position: absolute;
@@ -346,10 +267,6 @@
   pointer-events: none;
 }
 
-/* ============================================================
-   TRANSIÇÃO DE PÁGINA (Nuxt pageTransition, mode "out-in").
-   Só roda em navegação no cliente, nunca no load inicial.
-   ============================================================ */
 .page-enter-active,
 .page-leave-active {
   transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
@@ -364,4 +281,3 @@
   opacity: 0;
   transform: translateY(-8px);
 }
-

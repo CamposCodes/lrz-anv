@@ -1,14 +1,4 @@
 <template>
-  <!-- Root único (fallthrough do `class="mt-4"` do ContributorSection precisa
-       de um só elemento raiz). Composição de uma linha só (referência
-       voice-message estilo iOS): ícone de play solto (sem botão circular) +
-       waveform ocupando o resto da largura. Sem contador de tempo — a
-       waveform/legenda sincronizada já comunicam progresso. A linha de áudio
-       assume 100% do seek (clique/arrasto/teclado), sem botões de skip
-       dedicados. `pointer-events-auto`: em ContributorSection.vue este player
-       vive dentro do captionEl, que é `pointer-events-none` inteiro (deixa o
-       cartão central arrastável por baixo do texto da legenda) — sem isso o
-       player herdava o none e ficava inerte a toque/clique. -->
   <div class="pointer-events-auto flex w-full flex-col gap-1.5">
     <div class="flex items-center gap-3">
       <button
@@ -32,17 +22,6 @@
         </span>
       </button>
 
-      <!-- Waveform: barras grossas e espaçadas (gap-1, poucas e largas em vez de
-           muitas e finas) pra ler como equalizador de verdade, não uma textura
-           contínua — altura pseudo-aleatória determinística seedada pelo
-           próprio src (mesmo áudio sempre desenha a mesma forma, sem Web Audio
-           API/decode, efeito puramente decorativo). Preenchimento dourado
-           acompanha o progresso via clip-path numa segunda cópia das barras
-           (mesma técnica de "duplicar e recortar" de tabs com transição de cor
-           perfeita: mais barato e mais nítido que colorir cada barra por JS).
-           Quem escuta de verdade a interação é o <input type="range"> por
-           baixo, invisível mas funcional — clique/arrasto/teclado/toque cobrem
-           100% do seek, pra frente e pra trás, sem precisar de botão dedicado. -->
       <div class="waveform relative h-9 min-w-0 flex-1" :class="{ 'is-playing': isPlaying }" :style="{ '--seek-progress': `${progress}%` }">
         <div class="waveform-track pointer-events-none absolute inset-0 flex items-center gap-1" aria-hidden="true">
           <span
@@ -74,8 +53,6 @@
       </div>
     </div>
 
-    <!-- Com `media` (ex.: o <video> do cartão central), o player controla esse
-         elemento em vez de criar o próprio <audio>. -->
     <audio
       v-if="!media"
       ref="innerAudioRef"
@@ -93,14 +70,8 @@
 <script setup lang="ts">
 import { Play, Pause } from '@lucide/vue'
 
-// `src` também semeia o desenho da onda. `media` (opcional): elemento externo
-// que o player passa a controlar — play/pause, seek, progresso e legenda —
-// em vez do <audio> interno.
 const { src, media = null } = defineProps<{ src: string, media?: HTMLMediaElement | null }>()
 
-// Emite o tempo atual pra quem usa este player conseguir sincronizar algo
-// externo com a reprodução (ex.: legenda por trecho em ContributorSection.vue)
-// sem precisar duplicar o `<audio>`/composable lá fora.
 const emit = defineEmits<{ timeupdate: [seconds: number] }>()
 
 const { audioRef, isPlaying, currentTime, duration, toggle, seek, onPlay, onPause, onEnded, onTimeUpdate, onLoadedMetadata } = useAudioPlayer()
@@ -111,22 +82,15 @@ const progress = computed(() => duration.value ? (currentTime.value / duration.v
 
 const kind = computed(() => media?.tagName === 'VIDEO' ? 'vídeo' : 'áudio')
 
-// <audio> interno tem ref PRÓPRIA: se fosse direto no audioRef do composable,
-// ao trocar pra `media` o v-if desmontaria o <audio> e o Vue zeraria o
-// audioRef DEPOIS de ele já apontar pro vídeo — botão e onda paravam de agir.
 const innerAudioRef = ref<HTMLAudioElement | null>(null)
 watch([() => media, innerAudioRef], () => {
   audioRef.value = media ?? innerAudioRef.value
 }, { immediate: true, flush: 'post' })
 
-// Áudio local/cacheado pode terminar de carregar metadata antes do Vue montar
-// o listener @loadedmetadata — sem isso, a duração fica travada em 0:00.
 onMounted(() => {
   if (audioRef.value && audioRef.value.readyState >= 1) onLoadedMetadata()
 })
 
-// Elemento externo: liga os mesmos eventos que o <audio> interno usa no
-// template e aponta o composable pra ele. Refaz se o elemento mudar.
 const MEDIA_EVENTS = [
   ['play', onPlay],
   ['pause', onPause],
@@ -147,12 +111,6 @@ function onSeekInput(e: Event) {
   seek(Number((e.target as HTMLInputElement).value))
 }
 
-// Forma de onda "falsa" determinística: hash simples do src alimenta um PRNG
-// (mulberry32) só pra gerar alturas de barra estáveis entre servidor e cliente
-// (mesmo src → mesmo desenho, sempre) — nenhuma dependência nova, nenhum decode
-// de áudio real necessário pra um efeito decorativo. Menos barras (20 em vez
-// de 32) pra cada uma ficar mais grossa/visível como na referência (equalizer
-// chunky, não textura fina).
 const BAR_COUNT = 20
 
 function seedFromString(str: string) {
@@ -172,12 +130,6 @@ function mulberry32(seed: number) {
   }
 }
 
-// Envelope de 2 senoides de baixa frequência (fase/frequência sorteadas pelo
-// seed) desenha os picos/vales largos de uma fala real; ruído por barra bem
-// mais forte (0.45 em vez de 0.18) dá o contraste dramático da referência —
-// barras vizinhas variam bastante, algumas quase pontos (piso 0.08), outras
-// no topo. A faixa ficou mais alta (h-9) e com menos barras, então dá pra
-// baixar o piso sem sumir visualmente.
 const random = mulberry32(seedFromString(src))
 const freqA = 1.5 + random() * 1.5
 const freqB = 3 + random() * 2
@@ -195,13 +147,6 @@ const bars = Array.from({ length: BAR_COUNT }, (_, i) => {
 </script>
 
 <style scoped>
-/* Botão de play: leve glow dourado pulsante enquanto toca — feedback de estado
-   sutil, não um efeito chamativo. Sem pill/círculo de fundo aqui pra glow em cima
-   (referência atual é ícones soltos sobre o preto da página), então o glow vira
-   um halo radial atrás do ícone via ::after — só opacity+transform (GPU, sem
-   repaint de box-shadow) pra continuar dentro da regra de performance. prefers-
-   reduced-motion já neutraliza a animação globalmente (tailwind.css força
-   animation-duration: 0.01ms). */
 .play-btn::after {
   content: '';
   position: absolute;
@@ -222,10 +167,6 @@ const bars = Array.from({ length: BAR_COUNT }, (_, i) => {
   50% { opacity: 0.85; transform: scale(1.2); }
 }
 
-/* Foco por teclado: outline dourado — bom contraste contra o preto puro do
-   fundo da página (a regra global usa currentColor, que aqui é branco no
-   botão e ficaria fraco/pouco intencional; dourado combina com o resto do
-   accent do site). */
 .play-btn:focus-visible {
   outline: 2px solid var(--primary);
 }
@@ -249,10 +190,6 @@ const bars = Array.from({ length: BAR_COUNT }, (_, i) => {
   background: var(--primary);
 }
 
-/* "Respirando": só quando tocando, e só a barra que já ganhou animation-delay
-   por posição (v-for acima) — dá a sensação de forma de onda viva em vez de
-   estática, sem GSAP pra um pulso puramente CSS (mais barato, roda fora da
-   main thread). */
 .waveform.is-playing .waveform-bar {
   animation: waveform-pulse 1.1s ease-in-out infinite;
 }
@@ -262,12 +199,6 @@ const bars = Array.from({ length: BAR_COUNT }, (_, i) => {
   50% { transform: scaleY(1); }
 }
 
-/* Input nativo por cima das barras: mantém arrasto/teclado/toque de graça, mas
-   com track/thumb tornados invisíveis — quem é visto é a waveform decorativa
-   abaixo. Opacity não entra em jogo (esconderia também o outline de foco por
-   teclado), só os pseudo-elementos do range viram transparentes. É essa
-   camada — sem nenhum botão dedicado — que faz 100% do seek pra frente e pra
-   trás: clique pula, arrasto segue o cursor/dedo, setas/Home/End funcionam. */
 .waveform-range {
   margin: 0;
 }

@@ -21,16 +21,12 @@ test('cenas são contíguas e assentam no próprio topo, nos dois sentidos', asy
 
   expect(scenes).toHaveLength(SCENE_COUNT)
 
-  // Nenhum buraco nem sobreposição: o topo de cada cena é a soma das alturas
-  // anteriores. Buraco vira ponto de scroll que não pertence a cena nenhuma —
-  // é assim que uma seção passa despercebida.
   let expected = 0
   for (const scene of scenes) {
     expect(Math.abs(scene.top - expected)).toBeLessThanOrEqual(1)
     expected += scene.height
   }
 
-  // Âncoras sequenciais (o menu depende delas).
   expect(scenes.map(s => s.id).filter(Boolean))
     .toEqual(Array.from({ length: CONTRIBUTOR_COUNT }, (_, i) => `contributor-${i}`))
 
@@ -63,15 +59,12 @@ test('gesto vertical continua rolando a página por cima dos elementos arrastáv
   await scrollTo(page, tops[1]!)
   await expectSceneEntered(page, 0)
 
-  // touch-action: pan-y é o contrato que deixa o dedo rolar a página mesmo
-  // começando o gesto em cima do cartão (só o horizontal é do carrossel).
   const cardTouchAction = await page.evaluate(() => {
     const el = document.querySelector('#contributor-0 .touch-pan-y')
     return el ? getComputedStyle(el).touchAction : null
   })
   expect(cardTouchAction).toBe('pan-y')
 
-  // Mesma regra na galeria arrastável do final.
   await scrollTo(page, tops[tops.length - 1]!)
   const galleryTouchAction = await page.evaluate(() => {
     const el = document.querySelector('.gallery-viewport')
@@ -89,15 +82,12 @@ test('arrastar o cartão na horizontal troca a foto', async ({ page }) => {
   await scrollTo(page, tops[1]!)
   await expectSceneEntered(page, 0)
 
-  // z-20 é o cartão central (é o valor escolhido de propósito no template, pra
-  // ficar sob as pilhas laterais).
   const card = page.locator('#contributor-0 .z-20').first()
   const fotoAtual = () => card.locator('img').first().getAttribute('src')
 
   const antes = await fotoAtual()
   const box = (await card.boundingBox())!
 
-  // Arremesso horizontal: passa dos 60px de THROW_DISTANCE com velocidade.
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
   await page.mouse.down()
   for (let i = 1; i <= 6; i++) {
@@ -127,15 +117,11 @@ test('girar o celular reposiciona as pilhas no novo tamanho de palco', async ({ 
 
   const section = page.locator('#contributor-0')
 
-  // Só as camadas de pilha carregam data-pose-x (escrito por writeStackPoses) —
-  // é o que separa elas das cópias de entrada/viajantes, que param em outros
-  // pontos e não são reposicionadas.
   const stackOffset = () => section.evaluate((el) => {
     const stage = el.querySelector('.sticky')!.getBoundingClientRect()
     const center = stage.left + stage.width / 2
     const xs = Array.from(el.querySelectorAll('[data-pose-x]')).map((node) => {
       const r = node.getBoundingClientRect()
-      // Centro da camada menos o centro do palco = exatamente a pose x.
       return Math.abs(r.left + r.width / 2 - center)
     })
     return Math.max(0, ...xs)
@@ -148,17 +134,12 @@ test('girar o celular reposiciona as pilhas no novo tamanho de palco', async ({ 
   }
 
   await settleOnSection()
-  // Pose em retrato: 390 * 0.30 + peek ≈ 147.
   const portrait = await stackOffset()
   expect(portrait).toBeGreaterThan(100)
 
   await page.setViewportSize(LANDSCAPE)
-  // Debounce do resize (150ms) + margem. Rola de novo porque a rotação muda a
-  // altura de todas as cenas: o mesmo scrollY passa a cair em outro lugar.
   await page.waitForTimeout(600)
   await settleOnSection()
 
-  // Paisagem: 844 * 0.30 + peek ≈ 283. Sem remedir o palco ficava travado no
-  // valor do retrato.
   expect(await stackOffset()).toBeGreaterThan(portrait * 1.5)
 })
