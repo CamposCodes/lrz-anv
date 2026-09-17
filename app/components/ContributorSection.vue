@@ -390,19 +390,26 @@
         </h3>
 
         <!-- `contributor.video` (fixo, não `current.video`): controla o vídeo
-             SÓ quando ele é a própria mensagem (Arthur Dexis, sem `photos`).
-             Um vídeo dentro da pilha (Breno/Vitor/Lucas) não deve tomar conta
-             deste player — ele toca junto de `contributor.audio` sempre, e o
-             vídeo ganha um controle próprio abaixo da moldura (ver botão em
-             photoStageEl); a única regra entre os dois é não tocar ao mesmo
-             tempo (garantida pelo `activeAudio` de useAudioPlayer.ts, que os
-             dois players compartilham). -->
-        <AudioMessagePlayer
-          v-if="contributor.audio || contributor.video"
-          :src="contributor.audio ?? contributor.video?.h264 ?? ''"
-          :media="topVideoEl"
-          @timeupdate="onAudioTime"
-        />
+             SÓ quando ele é a própria mensagem (Arthur Dexis). Um vídeo dentro
+             da pilha (Breno/Vitor/Lucas) não deve tomar conta deste player —
+             ele toca junto de `contributor.audio` sempre, e o vídeo ganha um
+             controle próprio abaixo da moldura (ver botão em photoStageEl); a
+             única regra entre os dois é não tocar ao mesmo tempo (garantida
+             pelo `activeAudio` de useAudioPlayer.ts, que os dois players
+             compartilham). Arthur Dexis agora também tem fotos laterais
+             (`photos`, mesmo carrossel/arrasto das outras seções) — o wrapper
+             com `click.capture` intercepta o play quando o cartão está numa
+             foto lateral (ver onCaptionPlayClick) pra trazer o vídeo de volta
+             ao centro antes de tocar, em vez de só destravar áudio sem
+             imagem. `display:contents`: não entra no fluxo flex do captionEl. -->
+        <div style="display: contents" @click.capture="onCaptionPlayClick">
+          <AudioMessagePlayer
+            v-if="contributor.audio || contributor.video"
+            :src="contributor.audio ?? contributor.video?.h264 ?? ''"
+            :media="topVideoEl"
+            @timeupdate="onAudioTime"
+          />
+        </div>
 
         <!-- Quando há áudio, o texto É a transcrição do que a pessoa fala nele
              (mesmo campo `contributor.message`, sem duplicar dado). Se o
@@ -539,8 +546,14 @@ const photoPool = computed(() => {
   // dele: `photo` recebe o poster (usado nas pilhas/mural/mesmo antes do play)
   // e `video` o próprio vídeo — o template troca <img> por <video> conforme
   // `current.video` (mesmo mecanismo do vídeo de topo do Arthur Dexis).
+  // `video: undefined` explícito nos itens string: sem isso, o spread de
+  // `...props.contributor` carregaria o `contributor.video` de TOPO (Arthur
+  // Dexis, ver abaixo) pra QUALQUER foto do pool, e o template sempre
+  // renderizaria o vídeo em vez da foto lateral de verdade. Só o item cuja
+  // foto é a própria capa (`contributor.photo`, o slot do vídeo) recebe o
+  // vídeo — as demais fotos do array `photos` ficam mesmo como foto.
   return items.map(item => typeof item === 'string'
-    ? { ...props.contributor, photo: item }
+    ? { ...props.contributor, photo: item, video: item === props.contributor.photo ? props.contributor.video : undefined }
     : { ...props.contributor, photo: item.poster, video: item })
 })
 
@@ -683,11 +696,13 @@ const photoImgEl = ref<HTMLElement | null>(null)
 // usado pelo lightbox e por canZoom/toggleFlip, que tratam os dois tipos
 // igual (ampliar/girar independem de quem controla o play).
 const videoEl = computed(() => current.value?.video ? photoImgEl.value as HTMLVideoElement | null : null)
-// Vídeo de TOPO (Arthur Dexis): `contributor.video` é fixo, não muda com o
-// carrossel (ele nem tem `photos`) — é o único caso em que o AudioMessagePlayer
-// da legenda deve controlar o <video> (ver template). Um vídeo dentro da
-// pilha nunca cai aqui, mesmo sendo `current`.
-const topVideoEl = computed(() => props.contributor.video ? photoImgEl.value as HTMLVideoElement | null : null)
+// Vídeo de TOPO (Arthur Dexis): `contributor.video` é fixo, é quem o
+// AudioMessagePlayer da legenda controla — mas só quando o cartão central
+// está mesmo no slot do vídeo (current.video === contributor.video), não em
+// qualquer foto lateral do carrossel (ver `photos` do Arthur Dexis e o guard
+// em photoPool acima). Fora do slot, fica `null` — quem chama play() nesse
+// estado é onCaptionPlayClick, que primeiro traz o vídeo de volta ao centro.
+const topVideoEl = computed(() => (props.contributor.video && current.value?.video === props.contributor.video) ? photoImgEl.value as HTMLVideoElement | null : null)
 const safelightEl = ref<HTMLElement | null>(null)
 const travelInEl = ref<HTMLElement | null>(null)
 const travelInImgEl = ref<HTMLImageElement | null>(null)
@@ -730,7 +745,10 @@ const current = computed(() => photoPool.value[carousel.value.current]!)
 // Vídeo-recordação (dentro de `photos`, ex. Breno/Vitor/Lucas): tem controle
 // PRÓPRIO (botão abaixo da moldura, ver template) em vez de tomar conta do
 // player da legenda — esse continua sempre tocando `contributor.audio`.
-const isStackVideo = computed(() => !!(current.value?.video && props.contributor.photos))
+// Exclui o slot do vídeo de TOPO (Arthur Dexis: `photos` existe pra dar
+// fotos laterais a ele, mas quem controla o vídeo continua sendo o player da
+// legenda via topVideoEl, não este botão próprio).
+const isStackVideo = computed(() => !!(current.value?.video && props.contributor.photos) && current.value?.video !== props.contributor.video)
 const stackVideoEl = computed(() => isStackVideo.value ? photoImgEl.value as HTMLVideoElement | null : null)
 const {
   audioRef: stackVideoRef,
@@ -769,6 +787,34 @@ watch(current, (item) => {
   if (!item?.video || !props.contributor.photos) return
   nextTick(() => playStackVideo())
 })
+
+// Arthur Dexis: o vídeo é o foco, mas agora tem fotos laterais (arrastáveis,
+// como as outras seções) — se o usuário arrastou pra uma foto e aperta o
+// play da legenda, o pedido é o vídeo voltar sozinho pro centro E tocar, não
+// só destravar um <audio> escondido sem imagem nenhuma. `pendingVideoPlay`
+// segura essa intenção até a troca de carrossel terminar (a foto real do
+// vídeo só existe no DOM depois que `current` vira o slot dele).
+let pendingVideoPlay = false
+watch(current, (item) => {
+  if (!pendingVideoPlay || item?.video !== props.contributor.video) return
+  pendingVideoPlay = false
+  nextTick(() => topVideoEl.value?.play().catch(() => {}))
+})
+
+// Intercepta o clique no play da legenda ANTES do toggle interno do
+// AudioMessagePlayer (que agiria num `media` nulo/errado fora do slot do
+// vídeo — ver topVideoEl): só quando é Arthur Dexis (`contributor.video`) e o
+// cartão está numa foto lateral. `.play-btn` (não o resto do player) pra não
+// atrapalhar o arrasto da barra de progresso. `commitStackTransition` (não
+// um set direto de índice) porque é ela quem reposiciona as pilhas/cartão
+// via GSAP — mudar `currentIndex` sozinho deixaria a pose visual desatualizada.
+function onCaptionPlayClick(e: MouseEvent) {
+  if (!props.contributor.video || current.value?.video === props.contributor.video) return
+  if (!(e.target as HTMLElement).closest('.play-btn')) return
+  e.stopPropagation()
+  pendingVideoPlay = true
+  commitStackTransition('next', 0.4, THROW_VELOCITY * 4)
+}
 
 const prevDeque = computed(() => carousel.value.prev.map(i => photoPool.value[i]!))
 const nextDeque = computed(() => carousel.value.next.map(i => photoPool.value[i]!))

@@ -301,6 +301,13 @@ const rawContributors: Contributor[] = [
     // node scripts/transcribe.mjs public/video/mensagem-arthur-dexis.mp4.
     name: 'Arthur Dexis',
     photo: '/images/arthur-dexis/arthur-dexis-02.webp',
+    // photos: vídeo (mesma foto de `photo`, identifica o slot do vídeo — ver
+    // ContributorSection.vue) + foto lateral avulsa, pro carrossel/pilha
+    // lateral funcionar igual às outras seções sem tirar o vídeo do centro.
+    photos: [
+      '/images/arthur-dexis/arthur-dexis-02.webp',
+      '/images/arthur-dexis/arthur-dexis-01.webp'
+    ],
     video: {
       h264: '/video/mensagem-arthur-dexis.mp4',
       av1: '/video/mensagem-arthur-dexis.av1.mp4',
