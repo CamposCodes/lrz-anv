@@ -171,6 +171,50 @@
   }
 }
 
+/* ============================================================
+   SCROLLBAR — fina e translúcida, estilo macOS/Safari: cinza puro sobre
+   preto, nunca o dourado da marca (a barra é utilitário de navegação, não
+   elemento de marca — accent ali competiria com o próprio conteúdo dourado
+   das legendas). Track transparente (sem "calha" visível) e thumb flutuando
+   com respiro (border transparente + background-clip: padding-box, o
+   mesmo truque do Safari) em vez de preencher a largura inteira — é esse
+   respiro que lê como overlay minimalista, não uma barra clássica do
+   Windows. Regra global (html + *): cobre o scroll da página inteira e
+   qualquer área interna com overflow próprio (verso da foto no
+   ContributorSection, painel do NavMenu), sem repetir a regra em cada uma.
+   Firefox via scrollbar-width/-color; demais navegadores via
+   ::-webkit-scrollbar (sem prefixo unificado ainda). */
+@layer base {
+  html {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.22);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(255, 255, 255, 0.38);
+  }
+
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
