@@ -32,23 +32,22 @@
             Ir direto pra mensagem de
           </p>
           <ul ref="listEl" class="flex flex-col gap-1.5">
-            <li v-for="(c, i) in contributors" :key="c.name">
+            <li v-for="row in rows" :key="row.index">
               <button
                 type="button"
                 class="nav-menu-pill flex w-full items-baseline justify-between gap-4 rounded-full border border-white/10 px-4 py-2.5 text-left"
-                @click="goTo(i)"
+                @click="goTo(row.index)"
               >
                 <!-- Cursiva a 1.75rem: a Luxurious Script é uma face de display,
                      e nos 20px de antes os nomes viravam rabisco (é o que o dono
                      do site reportou). Em linha única, de largura cheia, sobra
                      espaço pra ela nesse tamanho. -->
-                <span class="nav-menu-name font-script text-[1.75rem] leading-none">{{ splitName(c.name)[0] }}</span>
-                <!-- O complemento (parentesco, sobrenome ou nome artístico) sai
-                     de DENTRO da cursiva e vira rótulo miúdo: não competia por
-                     atenção, só embaralhava. Não é enfeite — é o que distingue
-                     os homônimos (dois Vitor, dois Gabriel, dois Arthur). -->
-                <span v-if="splitName(c.name)[1]" class="nav-menu-qualifier shrink-0 text-[0.6875rem] uppercase tracking-[0.14em]">
-                  {{ splitName(c.name)[1] }}
+                <span class="nav-menu-name font-script text-[1.75rem] leading-none">{{ row.name }}</span>
+                <!-- Apelido/parentesco em amarelo (o dourado da marca): é o que
+                     distingue os homônimos (dois Vitor, dois Gabriel, dois
+                     Arthur) sem competir com o nome pela atenção. -->
+                <span v-if="row.title" class="nav-menu-title shrink-0 text-[0.6875rem] uppercase tracking-[0.14em]">
+                  {{ row.title }}
                 </span>
               </button>
             </li>
@@ -63,16 +62,41 @@
 import { Menu, X } from '@lucide/vue'
 import type { Contributor } from '@/types'
 
-defineProps<{ contributors: Contributor[] }>()
+const props = defineProps<{ contributors: Contributor[] }>()
 
-// `name` guarda "Vitor, Irmão" / "Gabriel, Campos" / "João Gabriel, Naipe Hom":
-// nome e complemento numa string só. A vírgula separa os dois papéis; nomes sem
-// vírgula ("Vó Malu", "Tia Claudia & Tio Kali") não têm complemento e ocupam a
-// linha inteira.
-function splitName(name: string): [string, string?] {
-  const [primary, secondary] = name.split(',').map(s => s.trim())
-  return [primary!, secondary]
+// Rótulo de MENU, só daqui — de propósito não mexe no `name` do contributors.ts,
+// que continua sendo o que aparece na legenda gigante sobre a foto de cada
+// seção ("Mãe", "Vó Malu", "Tio Gu"). Aqui o menu precisa de outra coisa: o
+// nome de quem é (primeiro plano) e o apelido/parentesco em amarelo, que é o
+// que diferencia os homônimos numa lista de 25.
+//
+// Chaveado pelo `name` de cada entrada. Mudar um `name` no contributors.ts sem
+// atualizar aqui não quebra nada: cai no fallback da vírgula, abaixo.
+const MENU_LABELS: Record<string, [string, string]> = {
+  'Mãe': ['Taíz', 'Mãe'],
+  'Pai': ['Cabral', 'Pai'],
+  'Vó Malu': ['Malu', 'Vó'],
+  'Vó Regina': ['Regina', 'Vó'],
+  'Tio Gu': ['Gu', 'Tio'],
+  'Tia Claudia & Tio Kali': ['Claudia & Kali', 'Tios'],
+  'Tia Selma & Tio Ronaldo': ['Selma & Ronaldo', 'Tios'],
+  'Breno Prenassi': ['Breno', 'Prenassi'],
+  'Licurci MC': ['Licurci', 'MC'],
+  'Davi Dooup': ['Davi', 'Dooup'],
+  'Arthur Dexis': ['Arthur', 'Dexis'],
+  'Gabriel Vassoura': ['Gabriel', 'Vassoura'],
+  'Babi Lino': ['Bárbara Lino', 'Babi'],
+  'Arthur DMA': ['Arthur', 'DMA'],
+  'Muay Thai': ['Jô Muay Thai', 'Equipe']
 }
+
+// Fallback: as entradas restantes já guardam os dois papéis numa string só
+// ("Vitor, Irmão", "Gabriel, Campos", "João Gabriel, Naipe Hom") — a vírgula
+// separa nome e apelido.
+const rows = computed(() => props.contributors.map((c, index) => {
+  const [name, title] = MENU_LABELS[c.name] ?? c.name.split(',').map(s => s.trim())
+  return { index, name: name!, title }
+}))
 
 const open = ref(false)
 const triggerEl = ref<HTMLButtonElement | null>(null)
@@ -156,13 +180,6 @@ onBeforeUnmount(() => {
   transform: scale(0.94);
 }
 
-/* Secundário tingido do próprio dourado da marca, nunca cinza neutro: num
-   painel escuro sobre a página inteira, cinza lê como "desligado", e o dourado
-   é o único accent do projeto (ver tailwind.css). */
-.nav-menu-panel {
-  --champagne: color-mix(in srgb, var(--primary) 55%, var(--foreground));
-}
-
 .nav-menu-kicker {
   color: color-mix(in srgb, var(--primary) 30%, var(--muted-foreground));
 }
@@ -178,9 +195,11 @@ onBeforeUnmount(() => {
     transform 150ms cubic-bezier(0.23, 1, 0.32, 1);
 }
 
-.nav-menu-qualifier {
-  color: var(--champagne);
-  transition: color 150ms ease;
+/* Amarelo cheio da marca (--primary), não um champanhe apagado: o apelido é
+   informação que se procura na lista, não enfeite de apoio. ~10:1 de contraste
+   sobre o painel escuro. */
+.nav-menu-title {
+  color: var(--primary);
 }
 
 /* Toque dispara :hover no tap e deixa o estado grudado — por isso o hover fica
@@ -191,11 +210,9 @@ onBeforeUnmount(() => {
     border-color: color-mix(in srgb, var(--primary) 45%, transparent);
   }
 
+  /* O apelido já é amarelo em repouso; no hover é o NOME que acende, então a
+     linha inteira fica dourada. */
   .nav-menu-pill:hover .nav-menu-name {
-    color: var(--primary);
-  }
-
-  .nav-menu-pill:hover .nav-menu-qualifier {
     color: var(--primary);
   }
 }

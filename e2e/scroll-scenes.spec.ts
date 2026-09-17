@@ -113,6 +113,14 @@ test.describe('menu de navegação', () => {
     const pills = panel.locator('button')
     expect(await pills.count()).toBe(CONTRIBUTOR_COUNT)
 
+    // Toda linha tem nome em cursiva E apelido em amarelo — o apelido é o que
+    // distingue os homônimos (dois Arthur, dois Gabriel, dois Vitor).
+    expect(await panel.locator('.nav-menu-name').count()).toBe(CONTRIBUTOR_COUNT)
+    expect(await panel.locator('.nav-menu-title').count()).toBe(CONTRIBUTOR_COUNT)
+
+    const titulos = await panel.locator('.nav-menu-title').allInnerTexts()
+    expect(titulos.every(t => t.trim().length > 0)).toBe(true)
+
     const alvo = 17
     await pills.nth(alvo).click()
 
