@@ -12,6 +12,14 @@ import { MotionPathPlugin } from 'gsap/MotionPathPlugin'
 export default defineNuxtPlugin(() => {
   gsap.registerPlugin(ScrollTrigger, SplitText, Draggable, InertiaPlugin, CustomEase, MotionPathPlugin)
 
+  // No celular, mostrar/esconder a barra de endereço conta como resize e dispara
+  // um ScrollTrigger.refresh() em TODOS os gatilhos da página (são 27 cenas) no
+  // meio da rolagem — recálculo caro e visível, com o scroll-snap tentando
+  // reassentar ao mesmo tempo. ignoreMobileResize manda ignorar exatamente essa
+  // mudança (só a altura, só no mobile). O custo é start/end ficarem defasados
+  // pela altura da barra; o `start: 'top 2px'` de tolerância nas cenas já cobre.
+  ScrollTrigger.config({ ignoreMobileResize: true })
+
   // Curvas nomeadas para os easings comuns de UI. Espelhe aqui qualquer curva
   // equivalente que você definir em CSS, para as duas linguagens ficarem em sincronia.
   //
