@@ -22,25 +22,23 @@
       >
         <div
           id="nav-menu-panel"
-          class="nav-menu-panel fixed right-4 top-[4.75rem] max-h-[min(32rem,calc(100dvh-6rem))] w-[min(22rem,calc(100vw-2rem))] overflow-y-auto rounded-2xl border p-2 shadow-2xl sm:right-6 sm:top-20"
-          style="background-color: color-mix(in srgb, var(--card) 95%, transparent); border-color: var(--border)"
+          class="nav-menu-panel fixed right-4 top-[4.75rem] max-h-[min(34rem,calc(100dvh-6rem))] w-[min(26rem,calc(100vw-2rem))] overflow-y-auto rounded-2xl border border-white/10 bg-black/60 p-3 shadow-2xl backdrop-blur-md sm:right-6 sm:top-20"
           role="dialog"
           aria-modal="true"
           aria-label="Navegação entre mensagens"
           @click.stop
         >
-          <p class="px-3 pb-1 pt-2 text-xs uppercase tracking-wide" style="color: var(--muted-foreground)">
+          <p class="px-1 pb-2 pt-1 text-xs uppercase tracking-wide" style="color: var(--muted-foreground)">
             Ir direto pra mensagem de
           </p>
-          <ul ref="listEl">
+          <ul ref="listEl" class="flex flex-wrap gap-2">
             <li v-for="(c, i) in contributors" :key="c.name">
               <button
                 type="button"
-                class="flex w-full flex-col items-start rounded-lg px-3 py-2.5 text-left transition-colors duration-150 hover:bg-white/5"
+                class="nav-menu-pill rounded-full border border-white/15 bg-white/5 px-4 py-2 font-script text-xl leading-none text-foreground transition-[color,background-color,border-color,transform] duration-150 hover:border-primary/60 hover:bg-primary/10 hover:text-primary"
                 @click="goTo(i)"
               >
-                <span class="font-comico text-sm" style="color: var(--foreground)">{{ splitName(c.name)[0] }}</span>
-                <span v-if="splitName(c.name)[1]" class="text-xs" style="color: var(--muted-foreground)">{{ splitName(c.name)[1] }}</span>
+                {{ c.name }}
               </button>
             </li>
           </ul>
@@ -55,11 +53,6 @@ import { Menu, X } from '@lucide/vue'
 import type { Contributor } from '@/types'
 
 defineProps<{ contributors: Contributor[] }>()
-
-function splitName(name: string): [string, string?] {
-  const [primary, secondary] = name.split(',').map(s => s.trim())
-  return [primary!, secondary]
-}
 
 const open = ref(false)
 const triggerEl = ref<HTMLButtonElement | null>(null)
@@ -141,5 +134,9 @@ onBeforeUnmount(() => {
 .nav-menu-enter-from .nav-menu-panel,
 .nav-menu-leave-to .nav-menu-panel {
   transform: scale(0.94);
+}
+
+.nav-menu-pill:active {
+  transform: scale(0.97);
 }
 </style>
