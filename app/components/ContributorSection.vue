@@ -34,8 +34,13 @@
              text-5xl/gap-10/min-h-[4.6em]) reduzem a MESMA conta pra caber
              sem scroll no caso comum; sm:* volta aos tamanhos maiores porque
              o desktop já testou caber lado a lado (ver captura). -->
+        <!-- data-scene-ready: marcador (inerte) de "o conteúdo desta cena
+             chegou". Cada seção tem exatamente um — legenda nas seções com
+             foto, este bloco nas de voz — e a opacidade dele indo a 1 é o que
+             o e2e observa pra saber que a entrada tocou. -->
         <div
           ref="voicesEl"
+          data-scene-ready
           class="flex w-full flex-col items-center gap-6 opacity-0 sm:flex-row sm:items-start sm:justify-center sm:gap-16"
         >
           <div v-for="(voice, i) in contributor.voices" :key="voice.name" class="flex w-full max-w-sm shrink-0 flex-col items-center text-center">
@@ -71,7 +76,7 @@
         v-else-if="!contributor.photo"
         class="absolute inset-x-6 inset-y-16 z-10 flex items-center justify-center overflow-y-auto sm:inset-x-10 sm:inset-y-10"
       >
-        <div ref="voicesEl" class="flex w-full max-w-md flex-col items-center gap-5 text-center opacity-0">
+        <div ref="voicesEl" data-scene-ready class="flex w-full max-w-md flex-col items-center gap-5 text-center opacity-0">
           <h3
             class="break-words font-script text-6xl leading-none sm:text-9xl"
             style="color: var(--primary); text-shadow: -2px -2px 3px #000, 2px -2px 3px #000, -2px 2px 3px #000, 2px 2px 3px #000, 0 0 3px #000, 0 6px 18px rgba(0,0,0,0.95)"
@@ -380,6 +385,7 @@
            root — é o único filho realmente clicável (play + seek). -->
       <div
         ref="captionEl"
+        data-scene-ready
         class="caption-fade pointer-events-none absolute left-6 right-6 bottom-6 isolate z-30 text-center opacity-0 sm:left-auto sm:right-10 sm:w-auto sm:bottom-auto sm:top-[58%] sm:max-w-xs sm:text-right sm:-translate-y-1/2"
       >
         <!-- Ordem: assinatura → player → transcrição. De quem é a mensagem

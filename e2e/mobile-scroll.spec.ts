@@ -1,21 +1,12 @@
 import { test, expect } from '@playwright/test'
+import {
+  CONTRIBUTOR_COUNT, SCENE_COUNT, PORTRAIT, LANDSCAPE,
+  waitForContent, sceneTops, scrollTo, expectSceneEntered
+} from './helpers'
 
-// Viewport de celular (iPhone 12/13). O site tem breakpoint único em 640px,
-// então 390 de largura exercita todo o caminho mobile.
-const PORTRAIT = { width: 390, height: 844 }
-const LANDSCAPE = { width: 844, height: 390 }
+test.use({ viewport: PORTRAIT, hasTouch: true, isMobile: true })
 
-// O gate de loading espera fontes + uma foto por contribuidor + load da janela,
-// com piso de 1.5s. Em dev (primeira compilação) pode passar de 10s.
-async function waitForContent(page: import('@playwright/test').Page) {
-  await page.waitForSelector('.lrz-mark', { state: 'detached', timeout: 60000 })
-}
-
-test.use({ viewport: PORTRAIT })
-
-test('toda cena é alcançável no scroll, descendo e subindo', async ({ page }) => {
-  // O gate de loading (fontes + 22 fotos + piso de 1.5s) somado à compilação sob
-  // demanda do Nuxt em dev passa fácil dos 30s padrão do Playwright.
+test('cenas são contíguas e assentam no próprio topo, nos dois sentidos', async ({ page }) => {
   test.setTimeout(120000)
   await page.goto('/')
   await waitForContent(page)
@@ -28,90 +19,117 @@ test('toda cena é alcançável no scroll, descendo e subindo', async ({ page })
     }))
   )
 
-  // Capa + 25 contribuidores + final.
-  expect(scenes).toHaveLength(27)
+  expect(scenes).toHaveLength(SCENE_COUNT)
 
-  // Nenhum buraco nem sobreposição entre cenas: o topo de cada uma é a soma das
-  // alturas anteriores. Buraco aqui vira ponto de scroll que não pertence a
-  // cena nenhuma — é assim que uma seção "passa despercebida".
+  // Nenhum buraco nem sobreposição: o topo de cada cena é a soma das alturas
+  // anteriores. Buraco vira ponto de scroll que não pertence a cena nenhuma —
+  // é assim que uma seção passa despercebida.
   let expected = 0
   for (const scene of scenes) {
     expect(Math.abs(scene.top - expected)).toBeLessThanOrEqual(1)
     expected += scene.height
   }
 
-  // Todos os contribuidores têm âncora sequencial (o menu depende disso).
-  const ids = scenes.map(s => s.id).filter(Boolean)
-  expect(ids).toEqual(Array.from({ length: 25 }, (_, i) => `contributor-${i}`))
+  // Âncoras sequenciais (o menu depende delas).
+  expect(scenes.map(s => s.id).filter(Boolean))
+    .toEqual(Array.from({ length: CONTRIBUTOR_COUNT }, (_, i) => `contributor-${i}`))
 
-  // Descendo: cada cena assenta exatamente no próprio topo.
-  for (const scene of scenes) {
-    await page.evaluate(top => window.scrollTo({ top, behavior: 'instant' }), scene.top)
-    expect(Math.round(await page.evaluate(() => window.scrollY))).toBe(scene.top)
-  }
-
-  // Subindo: mesma garantia no sentido inverso.
-  for (const scene of [...scenes].reverse()) {
-    await page.evaluate(top => window.scrollTo({ top, behavior: 'instant' }), scene.top)
+  for (const scene of [...scenes, ...[...scenes].reverse()]) {
+    await scrollTo(page, scene.top)
     expect(Math.round(await page.evaluate(() => window.scrollY))).toBe(scene.top)
   }
 })
 
-test('entrada da cena toca ao descer e desfaz ao subir', async ({ page }) => {
-  // O gate de loading (fontes + 22 fotos + piso de 1.5s) somado à compilação sob
-  // demanda do Nuxt em dev passa fácil dos 30s padrão do Playwright.
+test('nenhuma cena gera rolagem horizontal', async ({ page }) => {
   test.setTimeout(120000)
   await page.goto('/')
   await waitForContent(page)
 
-  // Amostra (começo/meio/fim): é o mesmo componente pras 25, e esperar a
-  // timeline inteira em todas levaria minutos.
-  for (const index of [0, 12, 24]) {
-    const section = page.locator(`#contributor-${index}`)
-    const caption = section.locator('.caption-fade')
-    if (!(await caption.count())) continue // seções de duas vozes não têm legenda
-
-    const top = await section.evaluate(el => el.getBoundingClientRect().top + window.scrollY)
-
-    await page.evaluate(y => window.scrollTo({ top: y, behavior: 'instant' }), top)
-    await expect.poll(
-      () => caption.evaluate(el => Number(getComputedStyle(el).opacity)),
-      { timeout: 10000, message: `entrada da seção ${index} não completou descendo` }
-    ).toBeGreaterThan(0.9)
-
-    // Voltar pra cena ANTERIOR (um ponto de snap de verdade — com
-    // scroll-snap-type mandatory, rolar pra um offset qualquer no meio do
-    // caminho é reassentado pelo navegador) tem de DESFAZER a entrada
-    // (toggleActions 'play reverse play reverse'), senão subir e descer de novo
-    // deixa a cena montada sem animação.
-    const previousTop = await page.evaluate((y) => {
-      const tops = Array.from(document.querySelectorAll('.scroll-scene'))
-        .map(el => Math.round(el.getBoundingClientRect().top + window.scrollY))
-        .filter(t => t < y)
-      return tops.length ? Math.max(...tops) : 0
-    }, top)
-
-    await page.evaluate(y => window.scrollTo({ top: y, behavior: 'instant' }), previousTop)
-    await expect.poll(
-      () => caption.evaluate(el => Number(getComputedStyle(el).opacity)),
-      { timeout: 10000, message: `entrada da seção ${index} não reverteu subindo` }
-    ).toBeLessThan(0.1)
+  const tops = await sceneTops(page)
+  for (const top of tops) {
+    await scrollTo(page, top)
+    const overflow = await page.evaluate(() =>
+      document.documentElement.scrollWidth - document.documentElement.clientWidth)
+    expect(overflow, `rolagem horizontal no scroll ${top}`).toBeLessThanOrEqual(1)
   }
 })
 
+test('gesto vertical continua rolando a página por cima dos elementos arrastáveis', async ({ page }) => {
+  test.setTimeout(120000)
+  await page.goto('/')
+  await waitForContent(page)
+
+  const tops = await sceneTops(page)
+  await scrollTo(page, tops[1]!)
+  await expectSceneEntered(page, 0)
+
+  // touch-action: pan-y é o contrato que deixa o dedo rolar a página mesmo
+  // começando o gesto em cima do cartão (só o horizontal é do carrossel).
+  const cardTouchAction = await page.evaluate(() => {
+    const el = document.querySelector('#contributor-0 .touch-pan-y')
+    return el ? getComputedStyle(el).touchAction : null
+  })
+  expect(cardTouchAction).toBe('pan-y')
+
+  // Mesma regra na galeria arrastável do final.
+  await scrollTo(page, tops[tops.length - 1]!)
+  const galleryTouchAction = await page.evaluate(() => {
+    const el = document.querySelector('.gallery-viewport')
+    return el ? getComputedStyle(el).touchAction : null
+  })
+  expect(galleryTouchAction).toBe('pan-y')
+})
+
+test('arrastar o cartão na horizontal troca a foto', async ({ page }) => {
+  test.setTimeout(120000)
+  await page.goto('/')
+  await waitForContent(page)
+
+  const tops = await sceneTops(page)
+  await scrollTo(page, tops[1]!)
+  await expectSceneEntered(page, 0)
+
+  // z-20 é o cartão central (é o valor escolhido de propósito no template, pra
+  // ficar sob as pilhas laterais).
+  const card = page.locator('#contributor-0 .z-20').first()
+  const fotoAtual = () => card.locator('img').first().getAttribute('src')
+
+  const antes = await fotoAtual()
+  const box = (await card.boundingBox())!
+
+  // Arremesso horizontal: passa dos 60px de THROW_DISTANCE com velocidade.
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+  await page.mouse.down()
+  for (let i = 1; i <= 6; i++) {
+    await page.mouse.move(box.x + box.width / 2 - i * 30, box.y + box.height / 2)
+  }
+  await page.mouse.up()
+
+  await expect.poll(fotoAtual, { timeout: 10000, message: 'foto central não trocou após o arrasto' })
+    .not.toBe(antes)
+})
+
+test('botões de ícone têm alvo de toque de 44px', async ({ page }) => {
+  test.setTimeout(120000)
+  await page.goto('/')
+  await waitForContent(page)
+
+  const menuButton = page.getByRole('button', { name: /abrir menu/i })
+  const box = (await menuButton.boundingBox())!
+  expect(box.width).toBeGreaterThanOrEqual(44)
+  expect(box.height).toBeGreaterThanOrEqual(44)
+})
+
 test('girar o celular reposiciona as pilhas no novo tamanho de palco', async ({ page }) => {
-  // O gate de loading (fontes + 22 fotos + piso de 1.5s) somado à compilação sob
-  // demanda do Nuxt em dev passa fácil dos 30s padrão do Playwright.
   test.setTimeout(120000)
   await page.goto('/')
   await waitForContent(page)
 
   const section = page.locator('#contributor-0')
-  const caption = section.locator('.caption-fade')
 
   // Só as camadas de pilha carregam data-pose-x (escrito por writeStackPoses) —
-  // é o seletor que separa elas das cópias de entrada/viajantes, que param em
-  // outros pontos e não são reposicionadas.
+  // é o que separa elas das cópias de entrada/viajantes, que param em outros
+  // pontos e não são reposicionadas.
   const stackOffset = () => section.evaluate((el) => {
     const stage = el.querySelector('.sticky')!.getBoundingClientRect()
     const center = stage.left + stage.width / 2
@@ -125,11 +143,8 @@ test('girar o celular reposiciona as pilhas no novo tamanho de palco', async ({ 
 
   async function settleOnSection() {
     const top = await section.evaluate(el => el.getBoundingClientRect().top + window.scrollY)
-    await page.evaluate(y => window.scrollTo({ top: y, behavior: 'instant' }), top)
-    await expect.poll(
-      () => caption.evaluate(el => Number(getComputedStyle(el).opacity)),
-      { timeout: 10000 }
-    ).toBeGreaterThan(0.9)
+    await scrollTo(page, top)
+    await expectSceneEntered(page, 0)
   }
 
   await settleOnSection()
@@ -138,13 +153,12 @@ test('girar o celular reposiciona as pilhas no novo tamanho de palco', async ({ 
   expect(portrait).toBeGreaterThan(100)
 
   await page.setViewportSize(LANDSCAPE)
-  // Debounce do resize (150ms) + margem. Rolar de novo porque a rotação muda a
+  // Debounce do resize (150ms) + margem. Rola de novo porque a rotação muda a
   // altura de todas as cenas: o mesmo scrollY passa a cair em outro lugar.
   await page.waitForTimeout(600)
   await settleOnSection()
 
-  // Paisagem: 844 * 0.30 + peek ≈ 283. Sem remedir o palco, ficava parado no
+  // Paisagem: 844 * 0.30 + peek ≈ 283. Sem remedir o palco ficava travado no
   // valor do retrato.
-  const landscape = await stackOffset()
-  expect(landscape).toBeGreaterThan(portrait * 1.5)
+  expect(await stackOffset()).toBeGreaterThan(portrait * 1.5)
 })
