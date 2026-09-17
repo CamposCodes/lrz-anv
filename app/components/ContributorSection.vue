@@ -1,5 +1,5 @@
 <template>
-  <section ref="sectionEl" class="scroll-scene relative" style="min-height: 200dvh">
+  <section :id="`contributor-${index}`" ref="sectionEl" class="scroll-scene relative" style="min-height: 200dvh">
     <div ref="stageEl" class="sticky top-0 h-dvh overflow-hidden px-6">
       <!-- Luz de segurança da câmara escura: brilho vinho atrás da cópia
            central. Acende piscando na entrada (lâmpada ligando) e fica acesa. -->
@@ -211,11 +211,12 @@
                 v-if="current?.video"
                 ref="photoImgEl"
                 class="print-video"
-                :style="{ '--video-ratio': current.video.height / current.video.width }"
+                :style="{ '--video-ratio': videoBoxRatio }"
                 :poster="current?.photo"
                 :aria-label="`Mensagem em vídeo de ${contributor.name}`"
                 playsinline
                 preload="metadata"
+                @play="videoStarted = true"
               >
                 <source v-if="current.video.av1" :src="current.video.av1" type="video/mp4; codecs=av01.0.05M.08">
                 <source :src="current.video.h264" type="video/mp4">
@@ -741,6 +742,30 @@ const LAYER_COUNT = 3
 const currentIndex = ref(0)
 const carousel = computed(() => carouselWindow(currentIndex.value, photoPool.value.length, LAYER_COUNT))
 const current = computed(() => photoPool.value[carousel.value.current]!)
+
+// Caixa do vídeo (--video-ratio, ver .print-video no <style>): antes do play
+// mostra o poster (foto), que pode ter proporção bem diferente do vídeo em
+// si (Arthur Dexis: foto paisagem, vídeo retrato) — caixa fixa na proporção
+// do vídeo sobrava borda preta enorme na foto. posterRatio mede a foto de
+// verdade (Image() à parte, só pra pegar naturalWidth/Height) e a caixa usa
+// essa proporção até o play começar; a partir daí vira a proporção real do
+// vídeo (só então, pra não esticar/cortar o vídeo tocando). Reseta ao trocar
+// de item no carrossel — cada foto tem a própria proporção.
+const posterRatio = ref<number | null>(null)
+const videoStarted = ref(false)
+watch(current, () => { videoStarted.value = false }, { flush: 'sync' })
+watch(() => current.value?.video ? current.value.photo : null, (src) => {
+  posterRatio.value = null
+  if (!src) return
+  const probe = new Image()
+  probe.onload = () => { posterRatio.value = probe.naturalHeight / probe.naturalWidth }
+  probe.src = src
+}, { immediate: true })
+const videoBoxRatio = computed(() => {
+  if (!current.value?.video) return 1
+  if (!videoStarted.value && posterRatio.value) return posterRatio.value
+  return current.value.video.height / current.value.video.width
+})
 
 // Vídeo-recordação (dentro de `photos`, ex. Breno/Vitor/Lucas): tem controle
 // PRÓPRIO (botão abaixo da moldura, ver template) em vez de tomar conta do
@@ -1497,8 +1522,12 @@ onBeforeUnmount(() => {
 /* Mensagem em vídeo no cartão: mesma caixa máxima das fotos (max-h/max-w do
    <img>), mas com a altura calculada pela proporção real (--video-ratio =
    altura/largura) — o cartão já nasce no tamanho certo antes do vídeo
-   carregar, sem pular nem distorcer. object-fit cover com a proporção exata
-   não corta nada; só garante que a capa preencha a caixa. */
+   carregar, sem pular nem distorcer. object-fit CONTAIN (não cover): a caixa
+   já tem a proporção exata do vídeo, então pro vídeo em si não faz diferença
+   nenhuma — mas o poster (foto de capa, proporção diferente da do vídeo)
+   com cover cortava a foto pra preencher a caixa; contain mostra a foto
+   inteira, só com letterbox (mesmo comportamento que a foto já tem nas
+   pilhas laterais, que usam <img> sem cover nenhum). */
 /* Papel em branco enquanto a foto não chega: caixa 4:5 com a área da
    "emulsão" escura, mesmo tamanho máximo de uma foto em pé no cartão. */
 .print-empty {
@@ -1520,7 +1549,7 @@ onBeforeUnmount(() => {
   position: relative;
   height: min(40dvh, calc(min(48vw, 28rem) * var(--video-ratio)));
   aspect-ratio: calc(1 / var(--video-ratio));
-  object-fit: cover;
+  object-fit: contain;
   background: #000;
 }
 

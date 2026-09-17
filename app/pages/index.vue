@@ -1,5 +1,7 @@
 <template>
   <main>
+    <NavMenu :contributors="contributors" />
+
     <CoverSection />
 
     <ContributorSection v-for="(c, i) in contributors" :key="c.name" :contributor="c" :index="i" />
