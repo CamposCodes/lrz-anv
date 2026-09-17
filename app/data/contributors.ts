@@ -474,8 +474,10 @@ const rawContributors: Contributor[] = [
   },
   {
     // Fotos reais (WhatsApp) em WebP na proporção original, sem upscale;
-    // joao-ricardo-01 (abraço no show) = capa; 05/06 chegaram depois. Áudio
-    // convertido do .ogg com ffmpeg: silêncio das pontas encurtado,
+    // joao-ricardo-01 (abraço no show) = capa; 05/06 chegaram depois;
+    // joao-ricardo-08 (com amigo de dreadlocks) chegou por último, só pro
+    // mural final (FinaleSection). Áudio convertido do .ogg com ffmpeg:
+    // silêncio das pontas encurtado,
     // passa-alta 70Hz, loudnorm -16.5 LUFS / pico -1.5 dBTP, MP3 mono
     // 44.1kHz 96kbps (mesmo formato dos outros). Transcrição do Whisper
     // dividida em frases e alinhada ao tempo real de cada palavra
@@ -483,7 +485,10 @@ const rawContributors: Contributor[] = [
     // "Lorena"→"Lorenzo".
     name: 'João Ricardo, Cotto',
     photo: '/images/joao-ricardo/joao-ricardo-01.webp',
-    photos: Array.from({ length: 7 }, (_, i) => `/images/joao-ricardo/joao-ricardo-${String(i + 1).padStart(2, '0')}.webp`),
+    photos: [
+      ...Array.from({ length: 7 }, (_, i) => `/images/joao-ricardo/joao-ricardo-${String(i + 1).padStart(2, '0')}.webp`),
+      '/images/joao-ricardo/joao-ricardo-08.webp'
+    ],
     audio: '/audio/mensagem-joao-ricardo.mp3',
     message: joaoRicardoSegments.map(s => s.text).join(' '),
     transcriptSegments: joaoRicardoSegments
